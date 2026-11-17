@@ -78,7 +78,14 @@ export async function sendTurn(text: string): Promise<TurnResult> {
       newMessage: {role: 'user', parts: [{text}]},
     }),
   });
-  if (!res.ok) throw new Error(`Agent error (HTTP ${res.status}): ${(await res.text()).slice(0, 200)}`);
+  if (!res.ok) {
+    const body = await res.text();
+    let msg = body.slice(0, 200);
+    try {
+      msg = JSON.parse(body).error ?? msg;
+    } catch {}
+    throw new Error(res.status === 504 || res.status === 502 ? msg : `Agent error (HTTP ${res.status}): ${msg}`);
+  }
   const events: any[] = await res.json();
   const tools: ToolResult[] = [];
   const args: Record<string, any> = {};

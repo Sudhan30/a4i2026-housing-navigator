@@ -1,6 +1,7 @@
 import os
-import requests
+import httpx
 from fastapi import Body, FastAPI, Request, Response
+from fastapi.responses import JSONResponse
 from fastapi.staticfiles import StaticFiles
 
 app = FastAPI(title="Stabilization Navigator Intake Desk")
@@ -10,37 +11,52 @@ TARGET_AGENT_URL = os.environ.get(
     "https://sq7-stabilization-navigator-530357188502.us-central1.run.app"
 )
 
+# Non-blocking proxy to the ADK agent. A blocking client inside async handlers
+# froze the whole server while waiting and could stall concurrent requests.
+_agent = httpx.AsyncClient(
+    base_url=TARGET_AGENT_URL,
+    timeout=httpx.Timeout(connect=10.0, read=170.0, write=30.0, pool=10.0),
+    limits=httpx.Limits(max_connections=50, max_keepalive_connections=10, keepalive_expiry=30.0),
+)
+
+
+def _passthrough(resp: httpx.Response) -> Response:
+    return Response(content=resp.content, status_code=resp.status_code, media_type=resp.headers.get("content-type"))
+
+
 @app.get("/apps/{path:path}")
 async def proxy_apps_get(path: str, request: Request):
-    url = f"{TARGET_AGENT_URL}/apps/{path}"
-    headers = {}
-    if "accept" in request.headers:
-        headers["Accept"] = request.headers["accept"]
-    resp = requests.get(url, headers=headers, timeout=60)
-    return Response(content=resp.content, status_code=resp.status_code, media_type=resp.headers.get("content-type"))
+    headers = {"Accept": request.headers["accept"]} if "accept" in request.headers else {}
+    try:
+        return _passthrough(await _agent.get(f"/apps/{path}", headers=headers))
+    except httpx.HTTPError as e:
+        return JSONResponse({"error": f"Agent unreachable: {type(e).__name__}"}, status_code=502)
+
 
 @app.post("/apps/{path:path}")
 async def proxy_apps(path: str, request: Request):
-    url = f"{TARGET_AGENT_URL}/apps/{path}"
-    body = await request.body()
     headers = {"Content-Type": request.headers.get("content-type", "application/json")}
-    resp = requests.post(url, data=body, headers=headers, timeout=60)
-    return Response(content=resp.content, status_code=resp.status_code, media_type=resp.headers.get("content-type"))
+    try:
+        return _passthrough(await _agent.post(f"/apps/{path}", content=await request.body(), headers=headers))
+    except httpx.HTTPError as e:
+        return JSONResponse({"error": f"Agent unreachable: {type(e).__name__}"}, status_code=502)
+
 
 @app.post("/run")
 async def proxy_run(request: Request):
-    url = f"{TARGET_AGENT_URL}/run"
-    body = await request.body()
     headers = {"Content-Type": request.headers.get("content-type", "application/json")}
-    resp = requests.post(url, data=body, headers=headers, timeout=120)
-    return Response(content=resp.content, status_code=resp.status_code, media_type=resp.headers.get("content-type"))
+    try:
+        return _passthrough(await _agent.post("/run", content=await request.body(), headers=headers))
+    except httpx.TimeoutException:
+        return JSONResponse({"error": "Hearth took too long to answer. Please send the message again."}, status_code=504)
+    except httpx.HTTPError as e:
+        return JSONResponse({"error": f"Agent unreachable: {type(e).__name__}. Please try again."}, status_code=502)
+
 
 # ---- Google Cloud speech + maps config ---------------------------------
 # The service runs as its Cloud Run service account, so Speech-to-Text and
 # Text-to-Speech need no keys. The Maps key is browser-side and restricted
 # to this site's referrers; it is passed in via the MAPS_API_KEY env var.
-from fastapi.responses import JSONResponse
-
 _LANGS = {"en-US", "es-US"}
 _VOICES = {"en-US": "en-US-Neural2-F", "es-US": "es-US-Neural2-A"}
 
