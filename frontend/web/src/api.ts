@@ -181,6 +181,11 @@ export async function getCase(id: string): Promise<any | null> {
   const r = await fetch(`/api/cases/${encodeURIComponent(id)}`);
   return r.ok ? r.json() : null;
 }
+export class CaseDeletedError extends Error {
+  constructor() {
+    super('This case was deleted in another window. Changes here are no longer saved.');
+  }
+}
 export async function saveCase(id: string, data: unknown): Promise<void> {
   if (IS_MOCK) return;
   const r = await fetch(`/api/cases/${encodeURIComponent(id)}`, {
@@ -188,6 +193,7 @@ export async function saveCase(id: string, data: unknown): Promise<void> {
     headers: {'Content-Type': 'application/json'},
     body: JSON.stringify(data),
   });
+  if (r.status === 410) throw new CaseDeletedError();
   if (!r.ok) throw new Error(`Could not save case (HTTP ${r.status})`);
 }
 export function newCaseId() {

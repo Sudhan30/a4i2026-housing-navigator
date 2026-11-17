@@ -155,6 +155,8 @@ def delete_case(case_id: str):
     if not _CASE_ID.match(case_id):
         return JSONResponse({"error": "bad id"}, status_code=400)
     _cases().document(case_id).delete()
+    # Tombstone: stops another open tab's autosave from silently re-creating the case.
+    _cases()._client.collection("deleted_cases").document(case_id).set({"deletedAt": _dt.now(_tz.utc).isoformat()})
     return {"ok": True}
 
 
@@ -162,6 +164,8 @@ def delete_case(case_id: str):
 async def save_case(case_id: str, request: Request):
     if not _CASE_ID.match(case_id):
         return JSONResponse({"error": "bad id"}, status_code=400)
+    if _cases()._client.collection("deleted_cases").document(case_id).get().exists:
+        return JSONResponse({"error": "This case was deleted."}, status_code=410)
     raw = await request.body()
     if len(raw) > 900_000:  # Firestore documents max out at 1 MiB
         return JSONResponse({"error": "case too large"}, status_code=413)

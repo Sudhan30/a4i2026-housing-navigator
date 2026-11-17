@@ -20,6 +20,7 @@ import {
   fetchBrief,
   getCase,
   saveCase,
+  CaseDeletedError,
   newCaseId,
   resetSession,
   type Evidence,
@@ -228,8 +229,13 @@ export default function App() {
       try {
         await saveCase(caseId, buildCaseDoc({msgs, draft, brief, block, hearingAt, editHtml}));
         setSaveState('saved');
-      } catch {
+      } catch (e) {
         setSaveState('error');
+        if (e instanceof CaseDeletedError) {
+          setCaseId(null);
+          history.replaceState(null, '', location.pathname + location.search);
+          setMsgs(m => [...m, {id: nextId.current++, role: 'error', text: e.message}]);
+        }
       }
     }, 800);
     return () => clearTimeout(t);
