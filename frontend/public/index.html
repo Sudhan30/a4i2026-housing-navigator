@@ -3,7 +3,13 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Affordable Housing Stabilization & Eviction Prevention Navigator — Intake Desk</title>
+  <title>Hearth · Housing-Court Intake Partner — Squad 7</title>
+  
+  <!-- Google Fonts: Source Serif 4 (Brief), Inter (UI), JetBrains Mono (Codes) -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&family=Source+Serif+4:ital,opsz,wght@0,8..60,400;0,8..60,600;0,8..60,700;1,8..60,400&display=swap" rel="stylesheet">
+  
   <link rel="stylesheet" href="styles.css">
 </head>
 <body>
@@ -11,118 +17,188 @@
   <!-- Top Navigation Header -->
   <header class="app-header">
     <div class="brand">
-      <span class="brand-icon">
-        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" style="vertical-align: middle;">
-          <path d="M12 2C10.5 5 7 8 7 13C7 16.866 10.134 20 14 20C17.866 20 21 16.866 21 13C21 9 17 5 12 2Z" fill="#f97316"/>
-          <path d="M11 10C10 12 8 14 8 16C8 17.6569 9.34315 19 11 19C12.6569 19 14 17.6569 14 16C14 14 12 12 11 10Z" fill="#fbbf24"/>
+      <span class="brand-icon" aria-hidden="true">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <path d="M12 2C10.5 5 7 8 7 13C7 16.866 10.134 20 14 20C17.866 20 21 16.866 21 13C21 9 17 5 12 2Z" fill="#B45309"/>
+          <path d="M11 10C10 12 8 14 8 16C8 17.6569 9.34315 19 11 19C12.6569 19 14 17.6569 14 16C14 14 12 12 11 10Z" fill="#F59E0B"/>
         </svg>
       </span>
-      <div>
-        <div class="brand-title">Hearth <span class="brand-subtitle">Housing-court intake partner · Squad 7</span></div>
+      <div class="brand-text">
+        <span class="brand-title">Hearth</span>
+        <span class="brand-subtitle">Housing-court intake partner · Squad 7</span>
       </div>
     </div>
 
     <div class="case-badge">
-      <span class="case-id">📁 Intake: Marisol V. · 1000 Block St. Nicholas Ave</span>
-      <span class="countdown-timer" id="hearing-countdown">⏳ Mon 9:30 AM · 89h remaining</span>
+      <span class="case-meta-item">Intake: <strong>Marisol V.</strong> (1000 Block St. Nicholas Ave)</span>
+      <span class="case-meta-divider" aria-hidden="true">·</span>
+      <span class="countdown-timer" id="hearing-countdown">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="vertical-align: -2px; margin-right: 3px;"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>
+        <span id="countdown-text">Mon 9:30 AM · 89h remaining</span>
+      </span>
     </div>
 
     <div class="header-controls">
-      <div class="mode-toggle">
-        <button id="mode-live-btn" class="mode-btn active">Live (Cloud Run)</button>
-        <button id="mode-mock-btn" class="mode-btn">Mock Replay</button>
+      <div class="mode-toggle" role="group" aria-label="Backend Mode">
+        <button id="mode-live-btn" class="mode-btn active" title="Query Live Cloud Run ADK Agent">Live</button>
+        <button id="mode-mock-btn" class="mode-btn" title="Replay Verified Golden Turns">Mock</button>
       </div>
+      <button id="demo-script-btn" class="icon-btn" title="Open Demo Script Drawer (Press ?)" aria-label="Open Demo Script">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"></path><line x1="12" y1="17" x2="12.01" y2="17"></line></svg>
+      </button>
     </div>
   </header>
 
-  <!-- Main Container -->
+  <!-- Main 2-Column Split Container -->
   <main class="app-container">
 
-    <!-- Left Pane: Chat (40%) -->
-    <section class="chat-pane">
-      <div class="chat-messages" id="chat-messages">
-        <!-- Messages dynamically inserted here -->
+    <!-- LEFT 58%: Conversation with Hearth -->
+    <section class="chat-pane" aria-label="Conversation with Hearth">
+      
+      <!-- Chronological Chat Feed -->
+      <div class="chat-messages" id="chat-messages" aria-live="polite">
+        <!-- Message bubbles dynamically inserted here -->
       </div>
 
-      <!-- Quick Turn Shortcuts -->
-      <div class="quick-prompts" id="quick-prompts">
-        <!-- Buttons for Turn 1 to Turn 7 -->
+      <!-- Suggested Next Question Soft Chips -->
+      <div class="suggested-bar" id="suggested-bar" aria-label="Suggested follow-up questions">
+        <span class="suggested-label">Suggested:</span>
+        <div class="suggested-chips" id="suggested-chips">
+          <!-- Populated dynamically based on conversation stage -->
+        </div>
       </div>
 
-      <!-- Chat Input Bar -->
-      <div class="chat-input-bar">
-        <input type="text" id="chat-input" class="chat-input" placeholder="Ask about conditions, evidence, statutes, relief funds..." autofocus>
-        <button id="send-btn" class="send-btn">Send &rarr;</button>
+      <!-- Composer Bar -->
+      <div class="chat-composer">
+        <input type="text" id="chat-input" class="chat-input" placeholder="Type or speak intake details, statutory questions, or facts..." autofocus aria-label="Chat message input">
+        <button id="mic-btn" class="composer-icon-btn" title="Dictate via Speech (Press to speak)" aria-label="Voice input" aria-pressed="false">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"></path><path d="M19 10v2a7 7 0 0 1-14 0v-2"></path><line x1="12" y1="19" x2="12" y2="23"></line><line x1="8" y1="23" x2="16" y2="23"></line></svg>
+        </button>
+        <button id="send-btn" class="send-btn" aria-label="Send message">
+          <span>Send</span>
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="12" x2="19" y2="12"></line><polyline points="12 5 19 12 12 19"></polyline></svg>
+        </button>
       </div>
     </section>
 
-    <!-- Right Pane: Live Case File (60%) -->
-    <section class="case-pane">
-      <nav class="case-tabs">
-        <button class="tab-btn active" data-tab="evidence">
-          📋 Evidence <span class="tab-badge" id="badge-evidence">0 kept</span>
-        </button>
-        <button class="tab-btn" data-tab="funds">
-          🛟 Relief Funds <span class="tab-badge" id="badge-funds">4 funds</span>
-        </button>
-        <button class="tab-btn" data-tab="law">
-          🏛️ Applicable Law <span class="tab-badge" id="badge-law">3 statutes</span>
-        </button>
-        <button class="tab-btn" data-tab="brief">
-          📄 Stabilization Brief <span class="tab-badge" id="badge-brief">Draft</span>
-        </button>
-      </nav>
-
-      <div class="case-content">
-        <!-- Evidence Tab -->
-        <div class="tab-panel active" id="tab-evidence">
-          <div style="color: var(--text-muted); text-align: center; padding: 40px 20px;">
-            <p style="font-size: 14px; margin-bottom: 8px;">No evidence loaded yet.</p>
-            <p style="font-size: 12px;">Run Turn 1 to execute semantic vector search over municipal 311 habitability records with hard relational decoy filtering.</p>
-          </div>
+    <!-- RIGHT 42%: Tenant Stabilization Brief, Drafting -->
+    <section class="brief-pane" aria-label="Tenant Stabilization Brief Drafting">
+      <div class="brief-toolbar">
+        <div class="brief-title-block">
+          <span class="brief-doc-title">TENANT STABILIZATION BRIEF, DRAFTING</span>
+          <span class="brief-status" id="brief-status-tag">Drafting in Progress</span>
         </div>
-
-        <!-- Relief Funds Tab -->
-        <div class="tab-panel" id="tab-funds">
-          <div style="color: var(--text-muted); text-align: center; padding: 40px 20px;">
-            <p style="font-size: 14px; margin-bottom: 8px;">Relief fund eligibility not evaluated yet.</p>
-            <p style="font-size: 12px;">Run Turn 4 to evaluate household criteria against NYC emergency rental assistance programs using our deterministic Python rules engine.</p>
-          </div>
+        <div class="brief-actions">
+          <button id="copy-brief-btn" class="brief-action-btn" title="Copy markdown to clipboard">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
+            <span>Copy</span>
+          </button>
+          <button id="print-brief-btn" class="brief-action-btn" title="Print court brief document">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 6 2 18 2 18 9"></polyline><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"></path><rect x="6" y="14" width="12" height="8"></rect></svg>
+            <span>Print</span>
+          </button>
+          <button id="download-brief-btn" class="brief-action-btn" title="Download brief markdown">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
+            <span>.md</span>
+          </button>
         </div>
+      </div>
 
-        <!-- Law Tab -->
-        <div class="tab-panel" id="tab-law">
-          <div style="color: var(--text-muted); text-align: center; padding: 40px 20px;">
-            <p style="font-size: 14px; margin-bottom: 8px;">No statutory citations retrieved yet.</p>
-            <p style="font-size: 12px;">Run Turn 3 to match municipal housing maintenance codes and NY state habitability statutes.</p>
-          </div>
-        </div>
+      <!-- Paper Document Container -->
+      <div class="brief-paper-wrapper">
+        <article class="brief-paper" id="brief-paper">
+          <!-- Document Header -->
+          <header class="paper-header">
+            <div class="paper-court-line">CIVIL COURT OF THE CITY OF NEW YORK · HOUSING PART</div>
+            <h1 class="paper-main-title">Tenant Stabilization Brief & Habitability Record</h1>
+            <div class="paper-meta-grid">
+              <div><strong>Intake Subject:</strong> Marisol V.</div>
+              <div><strong>Location:</strong> 1000 Block St. Nicholas Ave, Manhattan</div>
+              <div><strong>Calendar Call:</strong> Mon Nov 23, 2026 at 9:30 AM</div>
+              <div><strong>Tract GEOID:</strong> 36061024500</div>
+            </div>
+            <hr class="paper-divider">
+          </header>
 
-        <!-- Brief Tab -->
-        <div class="tab-panel" id="tab-brief">
-          <div class="brief-actions">
-            <button id="copy-brief-btn" class="action-btn">📋 Copy Brief to Clipboard</button>
-            <button id="print-brief-btn" class="action-btn">🖨️ Print Legal Memo</button>
+          <!-- Progressive Sections Container -->
+          <div id="brief-sections">
+            <!-- Section 1: Corroborating Municipal Evidence -->
+            <section class="paper-section" id="sec-evidence">
+              <h2 class="paper-sec-title">1. Corroborating Municipal Records & Evidence Filter</h2>
+              <div class="section-content" id="content-sec-evidence">
+                <div class="paper-placeholder">Waiting for habitability evidence search (Turn 1)...</div>
+              </div>
+            </section>
+
+            <!-- Section 2: Applicable Law & Statutory Defenses -->
+            <section class="paper-section" id="sec-law">
+              <h2 class="paper-sec-title">2. Applicable Housing Statutes & Legal Defenses</h2>
+              <div class="section-content" id="content-sec-law">
+                <div class="paper-placeholder">Waiting for statutory analysis (Turn 3)...</div>
+              </div>
+            </section>
+
+            <!-- Section 3: Relief Match -->
+            <section class="paper-section" id="sec-funds">
+              <h2 class="paper-sec-title">3. Emergency Rental Assistance & Arrears Relief Match</h2>
+              <div class="section-content" id="content-sec-funds">
+                <div class="paper-placeholder">Waiting for household facts & relief matching (Turn 4)...</div>
+              </div>
+            </section>
+
+            <!-- Section 4: Neighborhood Context -->
+            <section class="paper-section" id="sec-neighborhood">
+              <h2 class="paper-sec-title">4. Neighborhood Context & Eviction Baseline</h2>
+              <div class="section-content" id="content-sec-neighborhood">
+                <div class="paper-placeholder">Waiting for tract housing baseline (Turn 5)...</div>
+              </div>
+            </section>
+
+            <!-- Section 5: Evidentiary Boundaries -->
+            <section class="paper-section" id="sec-boundaries">
+              <h2 class="paper-sec-title">5. Evidentiary Boundary (What the Record Can't Prove Yet)</h2>
+              <div class="section-content" id="content-sec-boundaries">
+                <div class="paper-placeholder">Pending attorney inquiry boundaries from Hearth replies...</div>
+              </div>
+            </section>
+
+            <!-- Section 6: Full Finalized Brief Container (Revealed upon finalize_brief) -->
+            <section class="paper-section" id="sec-final-memo" style="display: none;">
+              <h2 class="paper-sec-title">6. Attorney Intake Memo & Equity Audit</h2>
+              <div class="section-content" id="content-sec-final-memo">
+                <!-- Dynamically loaded from real brief artifact -->
+              </div>
+            </section>
           </div>
-          <div class="brief-container" id="brief-content">
-            <p style="color: var(--text-muted);">The Tenant Stabilization Brief will render here upon completion of Turn 7 (finalize_brief).</p>
-          </div>
-        </div>
+
+          <!-- Paper Footer Provenance Note -->
+          <footer class="paper-footer">
+            <p class="paper-provenance" id="paper-provenance-text">
+              Real: ACS 5-yr, NYC HPD/311 · [Modeled]: eviction filings · [Planted Case] decoys excluded: <span id="provenance-decoy-count">7</span>
+            </p>
+          </footer>
+        </article>
       </div>
     </section>
 
   </main>
 
-  <!-- Bottom Provenance Footer -->
-  <footer class="app-footer">
-    <div class="footer-badges">
-      <span class="badge real">Real: ACS 5-Yr, 311 Narratives</span>
-      <span class="badge modeled">[Modeled]: Eviction Filings (4-Qtr Agg)</span>
-      <span class="badge planted">[Planted]: Decoys Filtered 9/9</span>
-      <span class="badge cloudrun">Cloud Run: sq7-stabilization-navigator</span>
+  <!-- Demo Script Drawer (opened with ? key or header button) -->
+  <aside class="demo-drawer" id="demo-drawer" aria-label="Demo Golden Script Drawer" aria-hidden="true">
+    <div class="drawer-header">
+      <h3>Intake Script (Golden Turns)</h3>
+      <button id="close-drawer-btn" class="icon-btn" aria-label="Close demo script drawer">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+      </button>
     </div>
-    <div class="footer-status" id="footer-status">Mode: Live Cloud Run (ADK)</div>
-  </footer>
+    <div class="drawer-instructions">
+      <p>Click any turn below to execute or rehearse. Press <kbd>?</kbd> anytime to toggle this drawer.</p>
+    </div>
+    <div class="drawer-turns" id="drawer-turns">
+      <!-- Turn buttons populated dynamically -->
+    </div>
+  </aside>
+  <div class="drawer-backdrop" id="drawer-backdrop"></div>
 
   <script src="app.js"></script>
 </body>
