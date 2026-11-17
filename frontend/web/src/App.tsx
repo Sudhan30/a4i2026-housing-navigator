@@ -271,10 +271,12 @@ export default function App() {
   const suggestion =
     userTurns === 1 && top ? `Why did you set aside ${top.id}? It looked like a strong match.` : GOLDEN[userTurns];
 
-  async function send(raw: string) {
+  // fromComposer: only what the paralegal typed or dictated gets the Spanish label,
+  // never messages the app composes (notice summaries, suggestions, 'Tell Hearth').
+  async function send(raw: string, fromComposer = false) {
     const text = raw.trim();
     if (!text || pending) return;
-    const outgoing = lang === 'es-US' && !text.startsWith('[') ? `[Tenant, in Spanish]: ${text}` : text;
+    const outgoing = fromComposer && lang === 'es-US' && !text.startsWith('[') ? `[Tenant, in Spanish]: ${text}` : text;
     setMsgs(m => [...m, {id: nextId.current++, role: 'user', text: outgoing}]);
     setValue('');
     setPending(true);
@@ -351,7 +353,7 @@ export default function App() {
     <ChatComposer
       value={value}
       onChange={setValue}
-      onSubmit={send}
+      onSubmit={v => send(v, true)}
       isDisabled={pending}
       placeholder={lang === 'es-US' ? 'Dictate or type what the tenant said (Spanish)…' : 'Describe the situation, or ask Hearth…'}
       headerContext={
