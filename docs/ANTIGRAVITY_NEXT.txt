@@ -44,6 +44,16 @@ Findings from a live test of https://sq7-intake-desk-530357188502.us-central1.ru
   9. frontend/server.py mounts its own directory as static files, so server.py,
      Dockerfile and requirements.txt are publicly downloadable.
 
+STATUS after commit 445b584 (verify each item before starting; don't redo finished work):
+  DONE: 1 (real artifact fetched in live mode), 2, 3, 4, 5, 6 (regex updated), 7 (resp.ok check)
+  STILL TO DO:
+    - 1-residual: the hardcoded brief still exists as a "mock mode / before generation"
+      fallback (lists DECOY-NEWY-07). Allow it ONLY when ?mock=1; in live mode show
+      placeholders until finalize_brief runs.
+    - 8 (409 session spam), 9 (static files exposed: server.py is still served),
+      g (timezone: case_file.py still uses naive datetime.now()).
+    - Add the funds tests in (c) if they're not there yet.
+
 Tasks:
   a. Add GET proxy routes to frontend/server.py:
        GET /apps/{path:path}  -> forward to AGENT_URL (needed for artifacts)
