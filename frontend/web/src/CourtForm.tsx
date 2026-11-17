@@ -129,8 +129,11 @@ export function CourtForm({
         )}
         {excluded.length > 0 && (
           <p className="cf-note">
-            {excluded.length} similar records were reviewed and not relied on (
-            {[...new Set(excluded.map(e => shortReason(e.excluded_because).toLowerCase()))].join('; ')}).
+            {excluded.length} similar records were reviewed and not relied on
+            {(() => {
+              const why = [...new Set(excluded.map(e => shortReason(e.excluded_because).toLowerCase()).filter(Boolean))];
+              return why.length ? ` (${why.join('; ')})` : '';
+            })()}.
           </p>
         )}
       </section>

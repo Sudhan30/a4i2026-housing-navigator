@@ -312,3 +312,20 @@ code { font-family: var(--mono); font-size: 12px; }
 .cf { padding-top: 54px; }
 .cf-stamp { top: 16px; right: 20px; }
 .cf-memo h4 { font-size: 13.5px; margin: 10px 0 4px; }
+
+/* ---- Human-in-the-loop editing ------------------------------------------ */
+.cf-editor { outline: none; }
+.cf-editor.is-editing .cf { box-shadow: 0 0 0 2px var(--brand), 0 8px 24px rgba(15,27,45,.10); cursor: text; }
+.cf-editor.is-editing .cf-box { cursor: pointer; }
+.cf-editor.is-editing .cf-box:hover { background: #e8efff; }
+.cf-editor.is-editing :is(p, td, li, label, .cf-blank):hover { background: #f6f8ff; }
+.edit-banner {
+  display: flex; align-items: center; justify-content: space-between; gap: 10px; flex-wrap: wrap;
+  border: 1px solid #f5d38a; background: #fffbeb; color: #78350f; border-radius: 8px; padding: 8px 12px; font-size: 13px;
+}
+.edit-banner-actions { display: inline-flex; gap: 6px; }
+.edit-note { font-size: 12.5px; color: var(--brand-ink); background: var(--brand-soft); border-radius: 6px; padding: 6px 10px; }
+.pdf-host { position: fixed; left: -10000px; top: 0; width: 816px; background: #fff; }
+.pdf-host .cf { box-shadow: none; border-radius: 0; }
+.callout { margin: 0; font-size: 13px; color: var(--color-text-secondary); background: var(--color-background-muted); border-radius: 6px; padding: 6px 10px; }
+.callout strong { color: var(--color-text-primary); font-weight: 600; }

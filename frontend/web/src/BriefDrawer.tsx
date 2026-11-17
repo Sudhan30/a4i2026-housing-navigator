@@ -1,3 +1,4 @@
+import {useLayoutEffect, useRef, useState} from 'react';
 import {Drawer, DrawerHeader} from '@astryxdesign/core/Drawer';
 import {Button} from '@astryxdesign/core/Button';
 import {Markdown} from '@astryxdesign/core/Markdown';
@@ -59,23 +60,139 @@ function draftMarkdown(d: Draft): string {
   return s.join('\n\n');
 }
 
-type BriefProps = {draft: Draft; brief: string | null; block: string | null; hours: number | null};
+/** Human-in-the-loop edits to the worksheet, kept in App so they survive panel changes. */
+export type BriefEdits = {
+  html: string | null; // edited worksheet markup; null = show the live agent version
+  editing: boolean;
+  stale: boolean; // agent produced new information after the paralegal started editing
+  start: (html: string) => void;
+  save: (html: string) => void;
+  discard: () => void;
+  keep: () => void;
+};
 
-function BriefBody({draft, brief, block, hours}: BriefProps) {
-  const md = brief ?? draftMarkdown(draft);
-  const download = () => {
-    const url = URL.createObjectURL(new Blob([md], {type: 'text/markdown'}));
-    const a = Object.assign(document.createElement('a'), {href: url, download: 'tenant_stabilization_brief.md'});
-    a.click();
-    URL.revokeObjectURL(url);
-  };
+type BriefProps = {draft: Draft; brief: string | null; block: string | null; hours: number | null; edits: BriefEdits};
+
+function BriefBody({draft, brief, block, hours, edits}: BriefProps) {
+  const live = useRef<HTMLDivElement>(null);
+  const editor = useRef<HTMLDivElement>(null);
+  const [pdfBusy, setPdfBusy] = useState(false);
+  const showingEdits = edits.html !== null;
+
+  // Load the snapshot into the editable surface once per edit session (not on every render).
+  useLayoutEffect(() => {
+    if (editor.current && edits.html !== null && editor.current.dataset.loaded !== edits.html.length.toString()) {
+      editor.current.innerHTML = edits.html;
+      editor.current.dataset.loaded = edits.html.length.toString();
+    }
+  }, [edits.html]);
+
+  const currentNode = () => (showingEdits ? editor.current : live.current)?.querySelector('.cf') ?? (showingEdits ? editor.current : live.current);
+
+  function toggleBox(e: React.MouseEvent) {
+    if (!edits.editing) return;
+    const box = (e.target as HTMLElement).closest('.cf-box');
+    if (!box) return;
+    e.preventDefault();
+    const on = box.classList.toggle('on');
+    box.textContent = on ? '✕' : '';
+    box.setAttribute('aria-label', on ? 'checked' : 'unchecked');
+  }
+
+  async function downloadPdf() {
+    const node = currentNode() as HTMLElement | null;
+    if (!node) return;
+    setPdfBusy(true);
+    try {
+      const html2pdf = (await import('html2pdf.js')).default;
+      const clone = node.cloneNode(true) as HTMLElement;
+      clone.removeAttribute('contenteditable');
+      clone.querySelectorAll('[contenteditable]').forEach(n => n.removeAttribute('contenteditable'));
+      clone.classList.add('cf-print');
+      const host = Object.assign(document.createElement('div'), {className: 'pdf-host'});
+      host.appendChild(clone);
+      document.body.appendChild(host);
+      const fix = document.createElement('style');
+      fix.textContent = 'img:not(.records-map img){display:inline !important;vertical-align:baseline !important}';
+      document.head.appendChild(fix);
+      try {
+      await html2pdf()
+        .set({
+          margin: [10, 10, 12, 10],
+          filename: 'tenant_stabilization_worksheet.pdf',
+          image: {type: 'jpeg', quality: 0.95},
+          html2canvas: {
+            scale: 2,
+            useCORS: true,
+            backgroundColor: '#ffffff',
+            // Astryx's reset makes <img> display:block, which shifts html2canvas text baselines.
+            // Undo it only in the cloned document that html2canvas renders.
+            onclone: (doc: Document) => {
+              const st = doc.createElement('style');
+              st.textContent = 'img{display:inline !important;vertical-align:baseline !important}';
+              doc.head.appendChild(st);
+            },
+          },
+          jsPDF: {unit: 'mm', format: 'letter', orientation: 'portrait'},
+          pagebreak: {mode: ['css', 'legacy'], avoid: ['tr', '.cf-sec h3', '.cf-sign']},
+        })
+        .from(clone)
+        .save();
+      } finally {
+        fix.remove();
+        host.remove();
+      }
+    } finally {
+      setPdfBusy(false);
+    }
+  }
+
+  const text = () => (currentNode() as HTMLElement | null)?.innerText ?? (brief ?? draftMarkdown(draft));
+
   return (
     <div className="brief">
-      <CourtForm draft={draft} brief={brief} block={block} hearing={draft.hearing ?? null} hours={hours} />
+      {edits.stale && (
+        <div className="edit-banner" role="status">
+          <span>Hearth has new information since you started editing.</span>
+          <span className="edit-banner-actions">
+            <Button label="Use updated version" variant="secondary" size="sm" onClick={edits.discard} />
+            <Button label="Keep my edits" variant="ghost" size="sm" onClick={edits.keep} />
+          </span>
+        </div>
+      )}
+      {showingEdits && !edits.editing && !edits.stale && (
+        <div className="edit-note">Edited by paralegal · this version is what gets downloaded</div>
+      )}
+
+      <div ref={live} hidden={showingEdits}>
+        <CourtForm draft={draft} brief={brief} block={block} hearing={draft.hearing ?? null} hours={hours} />
+      </div>
+      {showingEdits && (
+        <div
+          ref={editor}
+          className={`cf-editor ${edits.editing ? 'is-editing' : ''}`}
+          contentEditable={edits.editing}
+          suppressContentEditableWarning
+          spellCheck={edits.editing}
+          onClick={toggleBox}
+          aria-label="Editable worksheet"
+        />
+      )}
+
       <div className="brief-actions">
-        <Button label="Copy" variant="secondary" size="sm" onClick={() => navigator.clipboard.writeText(md)} />
-        <Button label="Download" variant="secondary" size="sm" onClick={download} />
-        <Button label="Print" variant="ghost" size="sm" onClick={() => window.print()} />
+        {edits.editing ? (
+          <Button label="Done editing" variant="primary" size="sm" onClick={() => edits.save(editor.current?.innerHTML ?? '')} />
+        ) : (
+          <Button
+            label={showingEdits ? 'Edit again' : 'Edit'}
+            variant="secondary"
+            size="sm"
+            onClick={() => edits.start(showingEdits ? editor.current?.innerHTML ?? '' : live.current?.innerHTML ?? '')}
+          />
+        )}
+        <Button label={pdfBusy ? 'Preparing PDF…' : 'Download PDF'} variant="secondary" size="sm" isDisabled={pdfBusy || edits.editing} onClick={downloadPdf} />
+        <Button label="Copy text" variant="ghost" size="sm" onClick={() => navigator.clipboard.writeText(text())} />
+        {showingEdits && !edits.editing && <Button label="Discard edits" variant="ghost" size="sm" onClick={edits.discard} />}
       </div>
     </div>
   );

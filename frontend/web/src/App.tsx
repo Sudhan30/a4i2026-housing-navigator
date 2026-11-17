@@ -24,8 +24,8 @@ import {
   type Tract,
   type ToolResult,
 } from './api';
-import {EvidenceBlock, FundsBlock} from './Blocks';
-import {BriefDrawer, BriefPanel, type Draft, type PanelMode} from './BriefDrawer';
+import {EvidenceBlock, FundsBlock, topSetAside} from './Blocks';
+import {BriefDrawer, BriefPanel, type BriefEdits, type Draft, type PanelMode} from './BriefDrawer';
 import {HearthMark} from './HearthMark';
 import {MicButton, ReadAloud} from './Voice';
 
@@ -36,7 +36,7 @@ type Msg =
 
 const GOLDEN = [
   "New intake. Tenant on the 1000 block of St. Nicholas Ave, Manhattan. Nonpayment hearing Monday 9:30. Radiators cold since early Nov, black mold around the tub, water coming through the bathroom wall. Anything open on her block?",
-  'Why did you drop the #2 result? It looked like a strong match.',
+  'Why did you set aside the top look-alike? It looked like a strong match.',
   'What law covers this?',
   "Household of 3, about $31k a year, owes $3,350, has the court index number. Her daughter's asthma is worse.",
   'How bad is this neighborhood compared to the city?',
@@ -112,6 +112,31 @@ export default function App() {
   const [briefOpen, setBriefOpen] = useState(false);
   const nextId = useRef(1);
 
+  // Human-in-the-loop edits to the worksheet.
+  const [version, setVersion] = useState(0);
+  const [editHtml, setEditHtml] = useState<string | null>(null);
+  const [editing, setEditing] = useState(false);
+  const [editedAt, setEditedAt] = useState(0);
+  const edits: BriefEdits = {
+    html: editHtml,
+    editing,
+    stale: editHtml !== null && version > editedAt,
+    start: html => {
+      setEditHtml(html);
+      setEditing(true);
+      setEditedAt(version);
+    },
+    save: html => {
+      setEditHtml(html);
+      setEditing(false);
+    },
+    discard: () => {
+      setEditHtml(null);
+      setEditing(false);
+    },
+    keep: () => setEditedAt(version),
+  };
+
 
   useEffect(() => {
     if (!pending) return;
@@ -121,7 +146,9 @@ export default function App() {
   }, [pending]);
 
   const userTurns = msgs.filter(m => m.role === 'user').length;
-  const suggestion = GOLDEN[userTurns];
+  const top = draft.evidence ? topSetAside(draft.evidence) : null;
+  const suggestion =
+    userTurns === 1 && top ? `Why did you set aside ${top.id}? It looked like a strong match.` : GOLDEN[userTurns];
 
   async function send(raw: string) {
     const text = raw.trim();
@@ -133,6 +160,7 @@ export default function App() {
     try {
       const res = await sendTurn(outgoing);
       absorb(res.tools, res.text);
+      if (res.tools.length) setVersion(v => v + 1);
       setMsgs(m => [...m, {id: nextId.current++, role: 'assistant', text: res.text, tools: res.tools}]);
       if (res.tools.some(t => t.name === 'finalize_brief')) {
         const md = await fetchBrief();
@@ -294,7 +322,7 @@ export default function App() {
         </div>
       )}
       {wide && mode !== 'chat' && (
-        <BriefPanel draft={draft} brief={brief} block={block} hours={hours} mode={mode} onMode={setMode} width={briefW} />
+        <BriefPanel draft={draft} brief={brief} block={block} hours={hours} edits={edits} mode={mode} onMode={setMode} width={briefW} />
       )}
       {wide && mode === 'chat' && (
         <button className="brief-rail" onClick={() => setMode('split')} aria-label="Show the brief">
@@ -310,6 +338,7 @@ export default function App() {
         brief={brief}
         block={block}
         hours={hours}
+        edits={edits}
       />}
       {IS_MOCK && <div className="mock-flag">Mock replay</div>}
     </div>

@@ -79,6 +79,16 @@ export function EvidenceBlock({evidence}: {evidence: Evidence}) {
         </ul>
       )}
 
+      {(() => {
+        const top = topSetAside(evidence);
+        return top ? (
+          <p className="callout">
+            Search ranked <code className="struck">{top.id}</code> #{top.rank} by meaning, but the rules set it aside:{' '}
+            <strong>{shortReason(top.reason).toLowerCase()}</strong>.
+          </p>
+        ) : null;
+      })()}
+
       {excluded.length > 0 && (
         <Collapsible
                 defaultIsOpen={false}
@@ -200,4 +210,17 @@ export function shortReason(reason = ''): string {
   if (/similarity/i.test(reason)) return 'Different hazard';
   if (/closed/i.test(reason)) return 'Case closed';
   return reason;
+}
+
+/** The highest-ranked candidate the rules set aside (what a judge should see). */
+export function topSetAside(evidence: Evidence): {id: string; rank: number; reason: string} | null {
+  const kept = new Set((evidence.kept ?? []).map(k => k.request_id));
+  const excluded = evidence.excluded ?? [];
+  const raw = evidence.raw_top5_before_rules ?? [];
+  const hit = raw.find(c => !kept.has(c.request_id));
+  if (hit) {
+    const ex = excluded.find(e => e.request_id === hit.request_id);
+    return {id: hit.request_id, rank: hit.rank, reason: ex?.excluded_because ?? hit.status};
+  }
+  return null;
 }
