@@ -52,7 +52,7 @@ document.addEventListener("DOMContentLoaded", async () => {
   }
 
   // Preload initial welcome
-  appendMessage("assistant", "Intake Navigator active. Case Marisol V. loaded (1000 Block St. Nicholas Ave). Ready for intake questions or click a turn below.");
+  appendMessage("assistant", "Hearth active. Case Marisol V. loaded (1000 Block St. Nicholas Ave). Ready for intake questions or click a turn below.");
 });
 
 async function initSession() {
@@ -146,7 +146,7 @@ function appendMessage(role, text, toolPill = null) {
 
   const labelEl = document.createElement("div");
   labelEl.className = "message-label";
-  labelEl.innerText = role === "user" ? "Paralegal (Dev)" : "Stabilization Navigator";
+  labelEl.innerText = role === "user" ? "Paralegal (Dev)" : "Hearth";
   msgEl.appendChild(labelEl);
 
   if (toolPill) {
