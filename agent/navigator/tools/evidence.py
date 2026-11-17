@@ -83,16 +83,46 @@ def search_habitability_evidence(tool_context: ToolContext, hazards: list[str] |
             "require an open habitability case.")
     tool_context.state["case"] = case
     first = rows[0] if rows else {}
+    # The tract the tenant's block sits in: the nearest candidate to the anchor point.
+    near = [r for r in rows if r.get("meters_from_anchor") is not None]
+    tract = min(near, key=lambda r: r["meters_from_anchor"])["census_tract_geoid"] if near else None
+    if tract and not case.get("census_tract_geoid"):
+        case["census_tract_geoid"] = tract
+        tool_context.state["case"] = case
     map_view = {
         "anchor": ({"lat": first["anchor_lat"], "lng": first["anchor_lng"]}
                    if first.get("anchor_lat") is not None else None),
         "radius_m": PROXIMITY_METERS,
     }
     return {"queries_used": queries, "raw_top5_before_rules": raw_top, "map": map_view,
+            "census_tract_geoid": case.get("census_tract_geoid") or tract,
             "kept": case["evidence"], "excluded": case["exclusions"],
             "evidence_scope": "100-block public record — corroborates block conditions, not the tenant's unit."}
 
+_DIRECTIONS = {"east": "e", "west": "w", "north": "n", "south": "s", "e": "e", "w": "w", "n": "n", "s": "s"}
+
+
 def _block_core(block: str) -> str:
-    # "1000 Block St Nicholas Avenue, Manhattan" -> "1000 block st nicholas"
-    b = block.lower().replace("ave.", "avenue").split(",")[0]
-    return " ".join(b.split()[:4])
+    """Tolerant match key for a 100-block address.
+
+    Speech-to-text and people spell streets differently ("Saint Nicolas Ave",
+    "St. Nicholas Avenue"). Keep the block number, normalize "Saint" -> "st" and
+    compass words, then keep only the first three letters of the street name:
+    "1000 Block Saint Nicolas Avenue" -> "1000 block st nic".
+    """
+    words = block.lower().replace(",", " ").replace(".", " ").split()
+    words = ["st" if w == "saint" else w for w in words]
+    if "block" not in words:
+        return " ".join(words[:3])
+    i = words.index("block")
+    num = words[i - 1] if i > 0 else ""
+    out = []
+    for w in words[i + 1:]:
+        if w in ("of", "the"):
+            continue
+        if not out and (w == "st" or w in _DIRECTIONS):
+            out.append(_DIRECTIONS.get(w, w))
+            continue
+        out.append(w[:3])
+        break
+    return f"{num} block {' '.join(out)}".strip()
