@@ -188,11 +188,15 @@ async function runLiveTurn(userText) {
 
   try {
     // 1. Ensure session
-    await fetch(`${LIVE_API_BASE}/apps/navigator/users/${userId}/sessions`, {
+    const sResp = await fetch(`${LIVE_API_BASE}/apps/navigator/users/${userId}/sessions`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ session_id: sessionId })
     });
+    if (!sResp.ok) {
+      const errText = await sResp.text();
+      throw new Error(`Session error HTTP ${sResp.status}: ${errText}`);
+    }
 
     // 2. Call /run
     const resp = await fetch(`${LIVE_API_BASE}/run`, {
@@ -209,6 +213,11 @@ async function runLiveTurn(userText) {
       })
     });
 
+    if (!resp.ok) {
+      const errText = await resp.text();
+      throw new Error(`Agent /run error HTTP ${resp.status}: ${errText}`);
+    }
+
     const events = await resp.json();
     let replyText = "";
     let toolsCalled = [];
@@ -223,7 +232,7 @@ async function runLiveTurn(userText) {
           } else if (p.functionResponse) {
             const toolName = p.functionResponse.name;
             const toolData = p.functionResponse.response;
-            processToolResponse(toolName, toolData);
+            await processToolResponse(toolName, toolData);
           }
         }
       }
@@ -240,16 +249,14 @@ async function runLiveTurn(userText) {
     }
   } catch (err) {
     if (loadingBubble) {
-      loadingBubble.innerHTML = `<span style="color: var(--accent-red);">Live request error: ${err.message}. Switching to mock data for demonstration.</span>`;
+      loadingBubble.innerHTML = `<span style="color: var(--accent-red); font-weight: 600;">⚠️ Live Request Error: ${err.message}</span>`;
     }
-    console.error(err);
-    // Fallback to mock turn
-    await runMockTurn(userText);
+    console.error("Live turn error:", err);
   }
 }
 
 // Process Tool Responses to Update Case File Card
-function processToolResponse(name, data) {
+async function processToolResponse(name, data) {
   if (!data) return;
 
   if (name === "open_case") {
@@ -291,7 +298,7 @@ function processToolResponse(name, data) {
   }
 
   if (name === "finalize_brief") {
-    renderBriefTab();
+    await renderBriefTab();
     switchTab("brief");
   }
 }
@@ -327,9 +334,10 @@ function renderEvidenceTab(data) {
     });
   }
 
+  const decoyCount = data.excluded ? data.excluded.length : 0;
   html += `<div class="section-title" style="margin-top: 16px;">
     <span>Excluded Near-Matches (Filtered Decoys)</span>
-    <span style="color: var(--accent-red); font-size: 11px;">REJECTED: 4/4 Traps</span>
+    <span style="color: var(--accent-red); font-size: 11px;">REJECTED: ${decoyCount} Traps</span>
   </div>`;
 
   if (data.excluded && data.excluded.length > 0) {
@@ -341,7 +349,7 @@ function renderEvidenceTab(data) {
             <span class="sim-score">Sim: ${Number(item.similarity || 0.75).toFixed(3)}</span>
           </div>
           <div class="card-body">
-            <div class="card-reason">⚠️ ${item.reason}</div>
+            <div class="card-reason">⚠️ ${item.excluded_because || item.reason || 'Excluded'}</div>
           </div>
         </div>
       `;
@@ -362,6 +370,10 @@ function renderFundsTab(funds) {
 
   funds.forEach(fund => {
     const statusClass = fund.status === "ELIGIBLE" ? "eligible" : (fund.status === "INELIGIBLE" ? "ineligible" : "needs-info");
+    const checksList = (fund.checks && fund.checks.length > 0)
+      ? fund.checks.map(c => `<li>${c.pass ? '✅' : '❌'} <strong>${c.rule}</strong>: ${c.detail}</li>`).join("")
+      : (fund.reasons || []).map(r => `<li>${r}</li>`).join("");
+
     html += `
       <div class="fund-card">
         <div class="fund-header">
@@ -370,7 +382,7 @@ function renderFundsTab(funds) {
         </div>
         <div class="fund-agency">${fund.administering_agency} · Max: <span class="fund-award">$${Number(fund.max_award_usd).toLocaleString()} USD</span></div>
         <ul class="fund-checks">
-          ${(fund.reasons || []).map(r => `<li>${r}</li>`).join("")}
+          ${checksList}
         </ul>
         <a href="${fund.intake_url}" target="_blank" style="color: var(--accent-blue); font-size: 11px; text-decoration: none;">🔗 Agency Intake Portal &rarr;</a>
       </div>
@@ -426,17 +438,33 @@ function renderTractSummary(t) {
       <div class="stat-label">[Modeled] Filings/Yr (Tract Median: ${t.median_tract_nonpayment_filings_modeled})</div>
     </div>
     <div class="stat-box">
-      <div class="stat-value">${t.no_vehicle_rate}%</div>
+      <div class="stat-value">${t.no_vehicle_pct ?? t.no_vehicle_rate}%</div>
       <div class="stat-label">No Vehicle Rate (Transit Barrier)</div>
     </div>
   `;
 }
 
-function renderBriefTab() {
+async function renderBriefTab() {
   const container = document.getElementById("brief-content");
-  document.getElementById("badge-brief").innerText = "Ready";
+  document.getElementById("badge-brief").innerText = "Loading...";
 
-  const briefMarkdown = `
+  try {
+    const url = `${LIVE_API_BASE}/apps/navigator/users/${userId}/sessions/${sessionId}/artifacts/tenant_stabilization_brief.md`;
+    const resp = await fetch(url);
+    if (resp.ok) {
+      const briefText = await resp.text();
+      caseData.briefContent = briefText;
+      container.innerHTML = formatMarkdown(briefText);
+      document.getElementById("badge-brief").innerText = "Ready";
+      return;
+    }
+  } catch (err) {
+    console.warn("Artifact fetch error:", err);
+  }
+
+  // Fallback for mock mode or prior to generation
+  if (isMockMode) {
+    const briefMarkdown = `
 # Tenant Stabilization Brief
 **Case File:** Marisol V. · 1000 Block St. Nicholas Ave, Manhattan
 **Hearing:** Monday 9:30 AM · Urgency: Standard (134h remaining)
@@ -484,8 +512,13 @@ function renderBriefTab() {
 - **Census Tract 36061024500:** Severe rent burden 32.8% vs. metro 25.2%.
 - **Transit Equity:** 91.6% zero-vehicle households → mandatory transit planning to 111 Centre St.
 - **Silent Distress Policy Safeguard:** High-burden immigrant tracts with low 311 reporting are routed to emergency repair inspection requests rather than denied assistance.
-  `;
-
-  caseData.briefContent = briefMarkdown;
-  container.innerHTML = formatMarkdown(briefMarkdown);
+    `;
+    caseData.briefContent = briefMarkdown;
+    container.innerHTML = formatMarkdown(briefMarkdown);
+    document.getElementById("badge-brief").innerText = "Ready";
+  } else {
+    container.innerHTML = `<p style="color: var(--text-muted); font-style: italic;">Tenant stabilization brief not yet drafted or unavailable.</p>`;
+    document.getElementById("badge-brief").innerText = "Pending";
+  }
 }
+

@@ -19,7 +19,7 @@ LEFT JOIN (
 """
 
 _CAP = re.compile(r"up to \$([\d,]+)", re.I)
-_INCOME = re.compile(r"<=\s*(\d+)%\s*(AMI|FPL)", re.I)
+_INCOME = re.compile(r"<=\s*(\d+)%\s*(?:of\s+the\s+Federal\s+Poverty\s+Level\s*\()?(AMI|FPL)", re.I)
 
 def _evaluate(b: dict, case: dict) -> dict:
     h = case.get("household", {})

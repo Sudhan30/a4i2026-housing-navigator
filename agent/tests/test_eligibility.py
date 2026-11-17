@@ -78,3 +78,44 @@ def test_marisol_relief_underreporting_fallback_no_evidence():
     assert fund_map.get("BUL-NY-03") == "ELIGIBLE", "BUL-NY-03 should remain ELIGIBLE"
     assert fund_map.get("BUL-NY-02") == "INELIGIBLE", "BUL-NY-02 requires open habitability case"
     assert fund_map.get("BUL-NY-04") == "INELIGIBLE", "BUL-NY-04 requires open habitability case"
+
+def test_bul_ny_01_fpl_income_matching():
+    """Verify BUL-NY-01 specifically matches '<=200% of the Federal Poverty Level (FPL)'
+    and produces an Income <=200% FPL check with correct pass/fail evaluation."""
+    tc = MockToolContext()
+    open_case(
+        block_address="1000 Block St Nicholas Avenue, Manhattan",
+        hearing_datetime="2026-11-23T09:30",
+        hazards=["no heat"],
+        tenant_narrative="Tenant with arrears.",
+        tool_context=tc,
+        census_tract_geoid="36061024500",
+    )
+    # Test passing income ($31,000 <= $49,720 for household of 3)
+    update_case(
+        tool_context=tc,
+        household_size=3,
+        annual_income_usd=31000.0,
+        arrears_usd=3350.0,
+    )
+    res = match_relief_funds(tool_context=tc)
+    b1 = next(f for f in res["funds"] if f["bulletin_id"] == "BUL-NY-01")
+    income_check = next((c for c in b1["checks"] if "FPL" in c["rule"]), None)
+    assert income_check is not None, "BUL-NY-01 must have an FPL income check"
+    assert income_check["pass"] is True, "Household of 3 with $31k should pass <=200% FPL"
+    assert b1["status"] == "ELIGIBLE"
+
+    # Test failing income ($60,000 > $49,720 for household of 3)
+    update_case(
+        tool_context=tc,
+        household_size=3,
+        annual_income_usd=60000.0,
+        arrears_usd=3350.0,
+    )
+    res_high = match_relief_funds(tool_context=tc)
+    b1_high = next(f for f in res_high["funds"] if f["bulletin_id"] == "BUL-NY-01")
+    income_check_high = next((c for c in b1_high["checks"] if "FPL" in c["rule"]), None)
+    assert income_check_high is not None
+    assert income_check_high["pass"] is False, "Household of 3 with $60k should fail <=200% FPL"
+    assert b1_high["status"] == "INELIGIBLE"
+

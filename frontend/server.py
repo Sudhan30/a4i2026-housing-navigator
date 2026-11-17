@@ -10,6 +10,15 @@ TARGET_AGENT_URL = os.environ.get(
     "https://sq7-stabilization-navigator-530357188502.us-central1.run.app"
 )
 
+@app.get("/apps/{path:path}")
+async def proxy_apps_get(path: str, request: Request):
+    url = f"{TARGET_AGENT_URL}/apps/{path}"
+    headers = {}
+    if "accept" in request.headers:
+        headers["Accept"] = request.headers["accept"]
+    resp = requests.get(url, headers=headers, timeout=60)
+    return Response(content=resp.content, status_code=resp.status_code, media_type=resp.headers.get("content-type"))
+
 @app.post("/apps/{path:path}")
 async def proxy_apps(path: str, request: Request):
     url = f"{TARGET_AGENT_URL}/apps/{path}"

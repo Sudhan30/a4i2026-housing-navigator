@@ -1,8 +1,8 @@
 # Mission M13: Live Dress Rehearsal & Go/No-Go Verification
 
-**Date:** 2026-11-17 19:07:54 UTC  
+**Date:** 2026-11-17 19:42:55 UTC  
 **Target Service:** `https://sq7-stabilization-navigator-530357188502.us-central1.run.app`  
-**User / Session:** `rehearsal_user_1794942422` / `sess_rehearsal_1794942422`  
+**User / Session:** `rehearsal_user_1794944523` / `sess_rehearsal_1794944523`  
 **Overall Verdict:** 🟢 GO FOR FINAL RECORDING  
 
 ---
@@ -11,13 +11,13 @@
 
 | Turn # | Prompt Concept | Tools Invoked | Latency (s) | Budget (<20s) | Evidentiary Boundary Cited | Turn Status |
 |---|---|---|---:|:---:|:---:|:---:|
-| **Turn 1** | New intake. Tenant on the 1000 bloc... | `open_case, search_habitability_evidence` | 10.71s | ✅ | ✅ | **PASS** |
-| **Turn 2** | Why did you drop that boiler record... | `Direct LLM` | 2.5s | ✅ | ✅ | **PASS** |
-| **Turn 3** | What law covers this?... | `match_statutes` | 5.22s | ✅ | ✅ | **PASS** |
-| **Turn 4** | Household of 3, about $31k a year, ... | `update_case, match_relief_funds` | 7.61s | ✅ | ✅ | **PASS** |
-| **Turn 5** | How bad is this neighborhood compar... | `find_tract_for_block, get_tract_context` | 9.33s | ✅ | ✅ | **PASS** |
-| **Turn 6** | Landlord's lawyer says the boiler w... | `Direct LLM` | 2.36s | ✅ | ✅ | **PASS** |
-| **Turn 7** | Draft the brief for the attorney.... | `finalize_brief` | 13.27s | ✅ | ✅ | **PASS** |
+| **Turn 1** | New intake. Tenant on the 1000 bloc... | `open_case, search_habitability_evidence` | 16.1s | ✅ | ✅ | **PASS** |
+| **Turn 2** | Why did you drop that boiler record... | `Direct LLM` | 2.64s | ✅ | ✅ | **PASS** |
+| **Turn 3** | What law covers this?... | `match_statutes` | 5.03s | ✅ | ✅ | **PASS** |
+| **Turn 4** | Household of 3, about $31k a year, ... | `update_case, match_relief_funds` | 7.0s | ✅ | ✅ | **PASS** |
+| **Turn 5** | How bad is this neighborhood compar... | `find_tract_for_block, get_tract_context` | 6.22s | ✅ | ✅ | **PASS** |
+| **Turn 6** | Landlord's lawyer says the boiler w... | `Direct LLM` | 3.17s | ✅ | ✅ | **PASS** |
+| **Turn 7** | Draft the brief for the attorney.... | `finalize_brief` | 11.9s | ✅ | ✅ | **PASS** |
 
 ---
 
