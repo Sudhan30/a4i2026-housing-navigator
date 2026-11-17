@@ -186,3 +186,59 @@ export async function saveCase(id: string, data: unknown): Promise<void> {
 export function newCaseId() {
   return `case-${Date.now().toString(36)}${Math.random().toString(36).slice(2, 6)}`;
 }
+
+export async function deleteCase(id: string): Promise<void> {
+  const r = await fetch(`/api/cases/${encodeURIComponent(id)}`, {method: 'DELETE'});
+  if (!r.ok) throw new Error(`Could not delete case (HTTP ${r.status})`);
+}
+
+// ---- Attachments (Gemini 2.5 Flash via frontend/server.py) --------------
+export type PhotoResult = {
+  is_housing_condition: boolean;
+  condition: string;
+  observed: string;
+  hazard_estimate: 'Immediately hazardous' | 'Hazardous' | 'Non-hazardous' | 'Unclear';
+  matching_hazards: string[];
+  cannot_prove: string[];
+};
+export type NoticeResult = {
+  is_court_document: boolean;
+  document_type: string;
+  index_number?: string | null;
+  hearing_datetime?: string | null;
+  court?: string | null;
+  arrears_usd?: number | null;
+  landlord_or_petitioner?: string | null;
+  date_served_or_dated?: string | null;
+  notes?: string;
+};
+
+async function postBlob<T>(path: string, blob: Blob, mime: string): Promise<T> {
+  const r = await fetch(`${path}?mime=${encodeURIComponent(mime)}`, {
+    method: 'POST',
+    headers: {'Content-Type': 'application/octet-stream'},
+    body: blob,
+  });
+  const j = await r.json().catch(() => ({}));
+  if (!r.ok) throw new Error(j.error ?? `Request failed (HTTP ${r.status})`);
+  return j as T;
+}
+export const inspectPhoto = (b: Blob, mime: string) => postBlob<{result: PhotoResult}>('/api/inspect-photo', b, mime).then(x => x.result);
+export const readNotice = (b: Blob, mime: string) => postBlob<{result: NoticeResult}>('/api/read-notice', b, mime).then(x => x.result);
+export const transcribeFile = (b: Blob, mime: string) => postBlob<{transcript: string}>('/api/transcribe-file', b, mime).then(x => x.transcript);
+
+/** Downscale an image file to a JPEG blob (for upload) and a small data URL (for the saved case). */
+export async function prepareImage(file: File, maxUpload = 1600, maxThumb = 360): Promise<{upload: Blob; thumb: string}> {
+  const bmp = await createImageBitmap(file);
+  const draw = (max: number) => {
+    const k = Math.min(1, max / Math.max(bmp.width, bmp.height));
+    const c = document.createElement('canvas');
+    c.width = Math.round(bmp.width * k);
+    c.height = Math.round(bmp.height * k);
+    c.getContext('2d')!.drawImage(bmp, 0, 0, c.width, c.height);
+    return c;
+  };
+  const upload = await new Promise<Blob>(res => draw(maxUpload).toBlob(b => res(b!), 'image/jpeg', 0.88));
+  const thumb = draw(maxThumb).toDataURL('image/jpeg', 0.75);
+  return {upload, thumb};
+}

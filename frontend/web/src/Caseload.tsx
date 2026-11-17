@@ -3,7 +3,7 @@ import {Drawer, DrawerHeader} from '@astryxdesign/core/Drawer';
 import {Button} from '@astryxdesign/core/Button';
 import {Badge} from '@astryxdesign/core/Badge';
 import {Text} from '@astryxdesign/core/Text';
-import {listCases, type CaseSummary} from './api';
+import {deleteCase, listCases, type CaseSummary} from './api';
 
 function timeLeft(at?: number) {
   if (!at) return {text: 'No hearing date', level: 'later' as const};
@@ -27,15 +27,28 @@ export function Caseload({
   currentId,
   onOpenCase,
   onNewCase,
+  onDeleted,
 }: {
   isOpen: boolean;
   onOpenChange: (o: boolean) => void;
   currentId: string | null;
   onOpenCase: (id: string) => void;
   onNewCase: () => void;
+  onDeleted: (id: string) => void;
 }) {
   const [cases, setCases] = useState<CaseSummary[] | null>(null);
   const [err, setErr] = useState<string | null>(null);
+  const [confirming, setConfirming] = useState<string | null>(null);
+  async function remove(id: string) {
+    try {
+      await deleteCase(id);
+      setCases(cs => (cs ?? []).filter(c => c.id !== id));
+      setConfirming(null);
+      onDeleted(id);
+    } catch (e) {
+      setErr((e as Error).message);
+    }
+  }
 
   useEffect(() => {
     if (!isOpen) return;
@@ -58,7 +71,7 @@ export function Caseload({
             const t = timeLeft(c.hearingAt);
             const st = STATUS[c.status ?? 'draft'] ?? STATUS.draft;
             return (
-              <li key={c.id}>
+              <li key={c.id} className="case-item">
                 <button className={`case-row ${c.id === currentId ? 'is-current' : ''}`} onClick={() => onOpenCase(c.id)}>
                   <span className="case-top">
                     <span className="case-block">{c.block ?? c.title ?? 'Untitled intake'}</span>
@@ -80,6 +93,19 @@ export function Caseload({
                     {c.id === currentId && <span className="case-open-tag">Open now</span>}
                   </span>
                 </button>
+                {confirming === c.id ? (
+                  <span className="case-confirm" role="alert">
+                    Delete this case and its saved worksheet? This can’t be undone.
+                    <span className="case-confirm-actions">
+                      <Button label="Delete" variant="destructive" size="sm" onClick={() => remove(c.id)} />
+                      <Button label="Cancel" variant="ghost" size="sm" onClick={() => setConfirming(null)} />
+                    </span>
+                  </span>
+                ) : (
+                  <button className="case-delete" onClick={() => setConfirming(c.id)} aria-label={`Delete case at ${c.block ?? 'untitled'}`}>
+                    Delete
+                  </button>
+                )}
               </li>
             );
           })}

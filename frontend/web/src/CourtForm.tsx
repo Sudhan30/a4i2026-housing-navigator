@@ -16,6 +16,11 @@ const CONDITIONS: [string, RegExp][] = [
   ['Pests', /roach|mice|rat|rodent|pest/i],
 ];
 
+const LAW_URL: Record<string, string> = {
+  'RPL § 235-b': 'https://www.nysenate.gov/legislation/laws/RPP/235-B',
+  'SSL § 143-b': 'https://www.nysenate.gov/legislation/laws/SOS/143-B',
+  'RPAPL § 711(2)': 'https://www.nysenate.gov/legislation/laws/RPA/711',
+};
 const DEFENSES: [string, string, RegExp][] = [
   ['Warranty of habitability; rent abatement', 'RPL § 235-b', /235-b/],
   ['Landlord repair deadlines (immediately hazardous: 24 h; hazardous: 30 days)', 'NYC Admin. Code § 27-2115', /27-2115/],
@@ -73,14 +78,14 @@ export function CourtForm({
 
       <div className="cf-caption">
         <div className="cf-parties">
-          <p><Blank value="Landlord of record" wide />,</p>
+          <p><Blank value={draft.notice?.landlord_or_petitioner || "Landlord of record"} wide />,</p>
           <p className="cf-role">Petitioner,</p>
           <p className="cf-against">— against —</p>
           <p><Blank value="Tenant (name withheld)" wide />,</p>
           <p className="cf-role">Respondent.</p>
         </div>
         <div className="cf-meta">
-          <p>Index No. L&amp;T <Blank value={null} /></p>
+          <p>Index No. L&amp;T <Blank value={draft.notice?.index_number ?? null} /></p>
           <p>Calendar: <Blank value={hearing} wide /></p>
           <p>Premises: <Blank value={block} wide /></p>
           <p>Time remaining: <Blank value={hours != null ? `${Math.round(hours)} hours` : null} /></p>
@@ -144,12 +149,27 @@ export function CourtForm({
         )}
       </section>
 
+      {(draft.photos?.length ?? 0) > 0 && (
+        <section className="cf-sec">
+          <h3>2a. Tenant-provided evidence (photos; visual review, not an HPD finding)</h3>
+          <div className="cf-photos">
+            {draft.photos!.map((ph, i) => (
+              <div key={i} className="cf-photo">
+                <img src={ph.thumb} alt={ph.condition} />
+                <p><strong>{ph.condition}</strong> — {ph.observed} <em>Visual estimate: {ph.estimate}.</em></p>
+              </div>
+            ))}
+          </div>
+          <p className="cf-note">Photos need the tenant’s statement of date and location to be used as evidence.</p>
+        </section>
+      )}
+
       <section className="cf-sec">
         <h3>3. Defenses and claims indicated</h3>
         {draft.statutes ? (
           <ul className="cf-list">
             {DEFENSES.map(([label, cite, re]) => (
-              <li key={cite}><Box checked={re.test(cites)} /> {label} <span className="cf-cite">{cite}</span></li>
+              <li key={cite}><Box checked={re.test(cites)} /> {label}{' '}{LAW_URL[cite] ? <a className="cf-cite" href={LAW_URL[cite]} target="_blank" rel="noreferrer">{cite}</a> : <span className="cf-cite">{cite}</span>}</li>
             ))}
           </ul>
         ) : (

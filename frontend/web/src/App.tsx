@@ -27,18 +27,21 @@ import {
   type Statute,
   type Tract,
   type ToolResult,
+  type NoticeResult,
 } from './api';
 import {EvidenceBlock, FundsBlock, topSetAside} from './Blocks';
 import {BriefDrawer, BriefPanel, type BriefEdits, type Draft, type PanelMode} from './BriefDrawer';
 import {HearthMark} from './HearthMark';
 import {Caseload} from './Caseload';
+import {AttachButton, AttachmentCard, type Attachment} from './Attach';
 import {HAZARD_CLASS, violationClass} from './hazards';
 import {MicButton, ReadAloud} from './Voice';
 
 type Msg =
   | {id: number; role: 'user'; text: string}
   | {id: number; role: 'assistant'; text: string; tools: ToolResult[]}
-  | {id: number; role: 'error'; text: string};
+  | {id: number; role: 'error'; text: string}
+  | {id: number; role: 'attachment'; att: Attachment};
 
 const GOLDEN = [
   "New intake. Tenant on the 1000 block of St. Nicholas Ave, Manhattan. Nonpayment hearing Monday 9:30. Radiators cold since early Nov, black mold around the tub, water coming through the bathroom wall. Anything open on her block?",
@@ -233,6 +236,36 @@ export default function App() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [caseId, msgs, draft, brief, editHtml, pending]);
 
+  function addAttachment(att: Attachment) {
+    if (!caseId) {
+      const id = newCaseId();
+      setCaseId(id);
+      history.replaceState(null, '', '#case=' + id);
+    }
+    setMsgs(m => [...m, {id: nextId.current++, role: 'attachment', att}]);
+    if (att.kind === 'photo' && att.result.is_housing_condition) {
+      const r = att.result;
+      setDraft(d => ({
+        ...d,
+        photos: [...(d.photos ?? []), {thumb: att.thumb, condition: r.condition, observed: r.observed, estimate: r.hazard_estimate, cannotProve: r.cannot_prove}],
+      }));
+      setVersion(v => v + 1);
+    }
+  }
+  function useNotice(n: NoticeResult) {
+    setDraft(d => ({...d, notice: n}));
+    setVersion(v => v + 1);
+    const bits = [
+      n.document_type,
+      n.index_number ? 'index number ' + n.index_number : null,
+      n.hearing_datetime ? 'hearing ' + n.hearing_datetime : null,
+      n.arrears_usd != null ? 'arrears claimed $' + n.arrears_usd.toLocaleString() : null,
+      n.landlord_or_petitioner ? 'petitioner ' + n.landlord_or_petitioner : null,
+      n.date_served_or_dated ? 'dated ' + n.date_served_or_dated : null,
+    ].filter(Boolean);
+    send('Court notice read: ' + bits.join(', ') + '. She has the court index number. Update the case with these facts.');
+  }
+
   const userTurns = msgs.filter(m => m.role === 'user').length;
   const top = draft.evidence ? topSetAside(draft.evidence) : null;
   const suggestion =
@@ -330,6 +363,11 @@ export default function App() {
       }
       footerActions={
         <div className="composer-tools">
+          <AttachButton
+            onAttachment={addAttachment}
+            onTranscript={t => setValue(v => (v ? v + '\n' + t : t))}
+            onError={msg => setMsgs(m => [...m, {id: nextId.current++, role: 'error', text: msg}])}
+          />
           <MicButton lang={lang} onText={t => setValue(v => (v ? `${v} ${t}` : t))} />
           <SegmentedControl value={lang} onChange={v => setLang(v as typeof lang)} label="Dictation language" size="sm">
             <SegmentedControlItem value="en-US" label="EN" />
@@ -388,6 +426,12 @@ export default function App() {
               m.role === 'user' ? (
                 <ChatMessage key={m.id} sender="user">
                   <ChatMessageBubble>{m.text}</ChatMessageBubble>
+                </ChatMessage>
+              ) : m.role === 'attachment' ? (
+                <ChatMessage key={m.id} sender="user">
+                  <ChatMessageBubble variant="ghost" width="100%">
+                    <AttachmentCard a={m.att} onTellHearth={send} onUseNotice={m.att.kind === 'notice' ? useNotice : undefined} />
+                  </ChatMessageBubble>
                 </ChatMessage>
               ) : m.role === 'error' ? (
                 <ChatMessage key={m.id} sender="assistant" avatar={<HearthMark size={28} />}>
@@ -449,7 +493,7 @@ export default function App() {
         hours={hours}
         edits={edits}
       />}
-      <Caseload isOpen={casesOpen} onOpenChange={setCasesOpen} currentId={caseId} onOpenCase={openCase} onNewCase={newCase} />
+      <Caseload isOpen={casesOpen} onOpenChange={setCasesOpen} currentId={caseId} onOpenCase={openCase} onNewCase={newCase} onDeleted={id => id === caseId && newCase()} />
       {IS_MOCK && <div className="mock-flag">Mock replay</div>}
     </div>
   );

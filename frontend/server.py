@@ -134,6 +134,14 @@ def get_case(case_id: str):
     return snap.to_dict()
 
 
+@app.delete("/api/cases/{case_id}")
+def delete_case(case_id: str):
+    if not _CASE_ID.match(case_id):
+        return JSONResponse({"error": "bad id"}, status_code=400)
+    _cases().document(case_id).delete()
+    return {"ok": True}
+
+
 @app.put("/api/cases/{case_id}")
 async def save_case(case_id: str, request: Request):
     if not _CASE_ID.match(case_id):
@@ -147,6 +155,110 @@ async def save_case(case_id: str, request: Request):
     data["updatedAt"] = _dt.now(_tz.utc).isoformat()
     _cases().document(case_id).set(data)
     return {"ok": True, "updatedAt": data["updatedAt"]}
+
+
+# ---- Multimodal intake (Gemini 2.5 Flash on Vertex AI) -------------------
+# Photos of conditions, court notices and audio files. Structured output only;
+# failures are returned as errors, never replaced with invented results.
+_IMG_TYPES = {"image/jpeg", "image/png", "image/webp", "image/heic", "image/heif"}
+_AUDIO_TYPES = {"audio/mpeg", "audio/mp3", "audio/wav", "audio/x-wav", "audio/webm", "audio/ogg", "audio/mp4", "audio/x-m4a", "audio/aac", "audio/flac"}
+_genai = None
+
+
+def _gemini():
+    global _genai
+    if _genai is None:
+        from google import genai
+        _genai = genai.Client(vertexai=True, project=os.environ.get("GOOGLE_CLOUD_PROJECT"),
+                              location=os.environ.get("GOOGLE_CLOUD_LOCATION", "us-central1"))
+    return _genai
+
+
+def _structured(data: bytes, mime: str, prompt: str, schema: dict):
+    import json as _json
+    from google.genai import types as gt
+    resp = _gemini().models.generate_content(
+        model=os.environ.get("VISION_MODEL", "gemini-2.5-flash"),
+        contents=[gt.Part.from_bytes(data=data, mime_type=mime), prompt],
+        config=gt.GenerateContentConfig(temperature=0.1, response_mime_type="application/json", response_schema=schema),
+    )
+    return _json.loads(resp.text)
+
+
+_PHOTO_SCHEMA = {
+    "type": "OBJECT",
+    "properties": {
+        "is_housing_condition": {"type": "BOOLEAN"},
+        "condition": {"type": "STRING", "description": "Short name, e.g. 'Black mold', 'Ceiling water leak', 'Exposed wiring'."},
+        "observed": {"type": "STRING", "description": "One or two plain sentences on what is visible."},
+        "hazard_estimate": {"type": "STRING", "enum": ["Immediately hazardous", "Hazardous", "Non-hazardous", "Unclear"]},
+        "matching_hazards": {"type": "ARRAY", "items": {"type": "STRING", "enum": ["no heat", "mold", "water leak", "electrical", "sewage", "pests", "other"]}},
+        "cannot_prove": {"type": "ARRAY", "items": {"type": "STRING"}, "description": "What this photo alone cannot establish."},
+    },
+    "required": ["is_housing_condition", "condition", "observed", "hazard_estimate", "matching_hazards", "cannot_prove"],
+}
+
+_NOTICE_SCHEMA = {
+    "type": "OBJECT",
+    "properties": {
+        "is_court_document": {"type": "BOOLEAN"},
+        "document_type": {"type": "STRING", "description": "e.g. Notice of Petition, 14-day rent demand, other."},
+        "index_number": {"type": "STRING", "nullable": True},
+        "hearing_datetime": {"type": "STRING", "nullable": True, "description": "ISO 'YYYY-MM-DDTHH:MM' if printed."},
+        "court": {"type": "STRING", "nullable": True},
+        "arrears_usd": {"type": "NUMBER", "nullable": True},
+        "landlord_or_petitioner": {"type": "STRING", "nullable": True},
+        "date_served_or_dated": {"type": "STRING", "nullable": True},
+        "notes": {"type": "STRING", "description": "Anything unclear or missing. Never include the tenant's name or apartment number."},
+    },
+    "required": ["is_court_document", "document_type", "notes"],
+}
+
+
+@app.post("/api/inspect-photo")
+def inspect_photo(body: bytes = Body(..., media_type="application/octet-stream"), mime: str = "image/jpeg"):
+    if mime not in _IMG_TYPES or not body or len(body) > 8_000_000:
+        return JSONResponse({"error": "Upload a JPEG, PNG, WEBP or HEIC photo under 8 MB."}, status_code=400)
+    prompt = ("You assist a legal-aid paralegal in NYC housing court. Describe the housing condition in this "
+              "tenant photo factually. Estimate severity using NYC HPD terms (Immediately hazardous / Hazardous / "
+              "Non-hazardous) as a visual estimate only. List what the photo cannot prove (for example the date taken, "
+              "whether it is inside the tenant's own unit, whether it was since repaired). Do not identify people.")
+    try:
+        return {"result": _structured(body, mime, prompt, _PHOTO_SCHEMA)}
+    except Exception as e:  # surface the failure; never fabricate an analysis
+        return JSONResponse({"error": f"Photo analysis failed: {type(e).__name__}"}, status_code=502)
+
+
+@app.post("/api/read-notice")
+def read_notice(body: bytes = Body(..., media_type="application/octet-stream"), mime: str = "image/jpeg"):
+    if (mime not in _IMG_TYPES and mime != "application/pdf") or not body or len(body) > 10_000_000:
+        return JSONResponse({"error": "Upload a photo or PDF of the notice under 10 MB."}, status_code=400)
+    prompt = ("Extract case details from this NYC housing court document (Notice of Petition, 14-day rent demand, "
+              "or similar). Return only what is printed; use null when a field is absent or unreadable. "
+              "Do NOT return the tenant's name or apartment number.")
+    try:
+        return {"result": _structured(body, mime, prompt, _NOTICE_SCHEMA)}
+    except Exception as e:
+        return JSONResponse({"error": f"Notice reading failed: {type(e).__name__}"}, status_code=502)
+
+
+@app.post("/api/transcribe-file")
+def transcribe_file(body: bytes = Body(..., media_type="application/octet-stream"), mime: str = "audio/mpeg"):
+    if mime not in _AUDIO_TYPES or not body or len(body) > 15_000_000:
+        return JSONResponse({"error": "Upload an audio file (mp3, m4a, wav, webm, ogg) under 15 MB."}, status_code=400)
+    from google.genai import types as gt
+    prompt = ("Transcribe this intake recording verbatim in its original language, then add one line starting "
+              "'English summary:' if it is not in English. Replace any personal names and apartment numbers with "
+              "[name] and [unit].")
+    try:
+        resp = _gemini().models.generate_content(
+            model=os.environ.get("VISION_MODEL", "gemini-2.5-flash"),
+            contents=[gt.Part.from_bytes(data=body, mime_type=mime), prompt],
+            config=gt.GenerateContentConfig(temperature=0.0),
+        )
+        return {"transcript": (resp.text or "").strip()}
+    except Exception as e:
+        return JSONResponse({"error": f"Transcription failed: {type(e).__name__}"}, status_code=502)
 
 
 # Serve static frontend files only from public directory

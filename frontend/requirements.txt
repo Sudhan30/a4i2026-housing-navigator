@@ -4,3 +4,4 @@ requests>=2.31.0
 google-cloud-speech>=2.26
 google-cloud-texttospeech>=2.16
 google-cloud-firestore>=2.16
+google-genai>=1.20

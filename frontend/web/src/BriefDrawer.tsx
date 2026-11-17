@@ -6,8 +6,11 @@ import {Text} from '@astryxdesign/core/Text';
 import type {Evidence, Fund, Statute, Tract} from './api';
 import {HAZARD_CLASS, hazardLabel, violationClass} from './Blocks';
 import {CourtForm} from './CourtForm';
+import {ReadAloud} from './Voice';
 
 export type Draft = {
+  photos?: {thumb: string; condition: string; observed: string; estimate: string; cannotProve: string[]}[];
+  notice?: import('./api').NoticeResult;
   household?: Record<string, unknown>;
   hearingIso?: string;
   hazards?: string[];
@@ -119,10 +122,37 @@ function BriefBody({draft, brief, block, hours, edits}: BriefProps) {
     }
   }
 
+  const summaryText = () => {
+    const kept = draft.evidence?.kept ?? [];
+    const parts = [
+      block ? 'Case at ' + block + '.' : '',
+      hours != null ? 'Hearing in about ' + Math.round(hours) + ' hours.' : '',
+      kept.length ? kept.length + ' open violations on record: ' + kept.map(r => hazardLabel(r)).join(', ') + '.' : '',
+      draft.funds ? 'Eligible for ' + draft.funds.filter(f => f.status === 'ELIGIBLE').length + ' of ' + draft.funds.length + ' relief funds.' : '',
+      draft.cantProve.length ? 'Still to confirm: ' + draft.cantProve.slice(0, 2).join(' ') : '',
+    ];
+    return parts.filter(Boolean).join(' ') || 'No case details yet.';
+  };
   const text = () => (currentNode() as HTMLElement | null)?.innerText ?? (brief ?? draftMarkdown(draft));
 
   return (
     <div className="brief">
+      <div className="brief-actions brief-toolbar">
+        {edits.editing ? (
+          <Button label="Done editing" variant="primary" size="sm" onClick={() => edits.save(editor.current?.innerHTML ?? '')} />
+        ) : (
+          <Button
+            label={showingEdits ? 'Edit again' : 'Edit'}
+            variant="secondary"
+            size="sm"
+            onClick={() => edits.start(showingEdits ? editor.current?.innerHTML ?? '' : live.current?.innerHTML ?? '')}
+          />
+        )}
+        <Button label={pdfBusy ? 'Preparing PDF…' : 'Download fillable PDF'} variant="secondary" size="sm" isDisabled={pdfBusy || edits.editing} onClick={downloadPdf} />
+        <ReadAloud text={summaryText()} label="Read summary" />
+        <Button label="Copy text" variant="ghost" size="sm" onClick={() => navigator.clipboard.writeText(text())} />
+        {showingEdits && !edits.editing && <Button label="Discard edits" variant="ghost" size="sm" onClick={edits.discard} />}
+      </div>
       {edits.stale && (
         <div className="edit-banner" role="status">
           <span>Hearth has new information since you started editing.</span>
@@ -151,21 +181,6 @@ function BriefBody({draft, brief, block, hours, edits}: BriefProps) {
         />
       )}
 
-      <div className="brief-actions">
-        {edits.editing ? (
-          <Button label="Done editing" variant="primary" size="sm" onClick={() => edits.save(editor.current?.innerHTML ?? '')} />
-        ) : (
-          <Button
-            label={showingEdits ? 'Edit again' : 'Edit'}
-            variant="secondary"
-            size="sm"
-            onClick={() => edits.start(showingEdits ? editor.current?.innerHTML ?? '' : live.current?.innerHTML ?? '')}
-          />
-        )}
-        <Button label={pdfBusy ? 'Preparing PDF…' : 'Download fillable PDF'} variant="secondary" size="sm" isDisabled={pdfBusy || edits.editing} onClick={downloadPdf} />
-        <Button label="Copy text" variant="ghost" size="sm" onClick={() => navigator.clipboard.writeText(text())} />
-        {showingEdits && !edits.editing && <Button label="Discard edits" variant="ghost" size="sm" onClick={edits.discard} />}
-      </div>
     </div>
   );
 }

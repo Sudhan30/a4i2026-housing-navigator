@@ -73,7 +73,7 @@ export function MicButton({lang, onText}: {lang: string; onText: (t: string) => 
 }
 
 /** Reads Hearth's short answer aloud with Google Cloud Text-to-Speech. */
-export function ReadAloud({text}: {text: string}) {
+export function ReadAloud({text, label = 'Read aloud'}: {text: string; label?: string}) {
   const [state, setState] = useState<'idle' | 'loading' | 'playing'>('idle');
   const audio = useRef<HTMLAudioElement | null>(null);
   const plain = text
@@ -105,7 +105,7 @@ export function ReadAloud({text}: {text: string}) {
   }
   return (
     <button type="button" className="read-aloud" onClick={toggle} disabled={state === 'loading'} title="Google Cloud Text-to-Speech">
-      {state === 'playing' ? 'Stop' : state === 'loading' ? 'Loading…' : 'Read aloud'}
+      {state === 'playing' ? 'Stop' : state === 'loading' ? 'Loading…' : label}
     </button>
   );
 }

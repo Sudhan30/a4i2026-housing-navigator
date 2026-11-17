@@ -93,6 +93,12 @@ export function EvidenceBlock({evidence}: {evidence: Evidence}) {
         ) : null;
       })()}
 
+      {kept.length > 0 && (
+        <a className="apply" href="https://hpdonline.nyc.gov/hpdonline/" target="_blank" rel="noreferrer">
+          Confirm the tenant’s own building in HPD Online →
+        </a>
+      )}
+
       {excluded.length > 0 && (
         <Collapsible
                 defaultIsOpen={false}

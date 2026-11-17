@@ -34,6 +34,10 @@ export function RecordsMap({
 }) {
   const el = useRef<HTMLDivElement>(null);
   const [provider, setProvider] = useState<'google' | 'osm' | null>(null);
+  const [layers, setLayers] = useState({records: true, setAside: true, radius: true});
+  const shownKept = layers.records ? kept : [];
+  const shownExcluded = layers.setAside ? excluded : [];
+  const shownView = layers.radius ? view : {...view, radius_m: 0};
 
   useEffect(() => {
     let cancelled = false;
@@ -57,8 +61,8 @@ export function RecordsMap({
 
   useEffect(() => {
     if (!el.current || !view.anchor || provider !== 'google') return;
-    return drawGoogle(el.current, view, kept, excluded);
-  }, [provider, view, kept, excluded]);
+    return drawGoogle(el.current, shownView, shownKept, shownExcluded);
+  }, [provider, view, kept, excluded, layers]);
 
   useEffect(() => {
     if (!el.current || !view.anchor || provider !== 'osm') return;
@@ -71,7 +75,7 @@ export function RecordsMap({
     }).addTo(map);
 
     const radius = L.circle([lat, lng], {
-      radius: view.radius_m,
+      radius: shownView.radius_m,
       color: '#1d4ed8',
       weight: 1.5,
       dashArray: '4 4',
@@ -82,7 +86,7 @@ export function RecordsMap({
     L.circleMarker([lat, lng], {radius: 16, color: '#0f1b2d', weight: 2.5, fillColor: '#0f1b2d', fillOpacity: 0.08})
       .bindTooltip("Tenant's block")
       .addTo(map);
-    for (const r of excluded) {
+    for (const r of shownExcluded) {
       if (r.latitude == null || r.longitude == null) continue;
       L.circleMarker([r.latitude, r.longitude], {radius: 5, color: '#94a3b8', weight: 1.5, fillColor: '#fff', fillOpacity: 1})
         .bindTooltip(`<b>${esc(r.request_id)}</b> · set aside<br>${esc(r.excluded_because ?? '')}`)
@@ -90,7 +94,7 @@ export function RecordsMap({
     }
     // Several records can share one 100-block point; fan them out slightly so each is clickable.
     const seen = new Map<string, number>();
-    for (const r of kept) {
+    for (const r of shownKept) {
       if (r.latitude == null || r.longitude == null) continue;
       const key = `${r.latitude},${r.longitude}`;
       const n = seen.get(key) ?? 0;
@@ -114,11 +118,19 @@ export function RecordsMap({
       ro.disconnect();
       map.remove();
     };
-  }, [provider, view, kept, excluded]);
+  }, [provider, view, kept, excluded, layers]);
 
   if (!view.anchor) return null;
   return (
     <figure className="map-figure">
+      <div className="map-layers" role="group" aria-label="Map layers">
+        {([['records', 'Violations on record'], ['setAside', 'Set-aside look-alikes'], ['radius', '800 m radius']] as const).map(([k, label]) => (
+          <label key={k} className={`layer-chip ${layers[k] ? 'on' : ''}`}>
+            <input type="checkbox" checked={layers[k]} onChange={() => setLayers(l => ({...l, [k]: !l[k]}))} />
+            {label}
+          </label>
+        ))}
+      </div>
       <div ref={el} className="records-map" role="img" aria-label="Map of the tenant's block and nearby records" />
       <figcaption className="map-legend">
         <span><i className="dot" style={{background: HAZARD_CLASS['Class C'].color}} />Immediately hazardous (24 h)</span>
@@ -186,7 +198,7 @@ function drawGoogle(node: HTMLElement, view: MapView, kept: Rec[], excluded: Rec
     return m;
   };
   const circle = new g.Circle({
-    map, center, radius: view.radius_m,
+    map: view.radius_m ? map : null, center, radius: view.radius_m || 800,
     strokeColor: '#1d4ed8', strokeOpacity: 0.7, strokeWeight: 1.5,
     fillColor: '#1d4ed8', fillOpacity: 0.05, clickable: false,
   });
