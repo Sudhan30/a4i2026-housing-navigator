@@ -48,11 +48,29 @@ document.addEventListener("DOMContentLoaded", async () => {
     setMode(true);
   } else {
     setMode(false);
+    await initSession();
   }
 
   // Preload initial welcome
   appendMessage("assistant", "Intake Navigator active. Case Marisol V. loaded (1000 Block St. Nicholas Ave). Ready for intake questions or click a turn below.");
 });
+
+async function initSession() {
+  if (isMockMode) return;
+  try {
+    const sResp = await fetch(`${LIVE_API_BASE}/apps/navigator/users/${userId}/sessions/${sessionId}`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({})
+    });
+    // Ignore 409 (already exists)
+    if (!sResp.ok && sResp.status !== 409) {
+      console.warn("Session init status:", sResp.status);
+    }
+  } catch (err) {
+    console.warn("Session init error:", err);
+  }
+}
 
 function setupControls() {
   document.getElementById("mode-mock-btn").addEventListener("click", () => setMode(true));
@@ -187,18 +205,6 @@ async function runLiveTurn(userText) {
   const loadingBubble = document.querySelector(".message.assistant:last-child .message-bubble");
 
   try {
-    // 1. Ensure session
-    const sResp = await fetch(`${LIVE_API_BASE}/apps/navigator/users/${userId}/sessions`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ session_id: sessionId })
-    });
-    if (!sResp.ok) {
-      const errText = await sResp.text();
-      throw new Error(`Session error HTTP ${sResp.status}: ${errText}`);
-    }
-
-    // 2. Call /run
     const resp = await fetch(`${LIVE_API_BASE}/run`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -310,11 +316,13 @@ function switchTab(tabName) {
 
 function renderEvidenceTab(data) {
   const container = document.getElementById("tab-evidence");
-  document.getElementById("badge-evidence").innerText = `${data.kept ? data.kept.length : 0} kept / ${data.excluded ? data.excluded.length : 0} excl`;
+  const keptCount = data.kept ? data.kept.length : 0;
+  const decoyCount = data.excluded ? data.excluded.length : 0;
+  document.getElementById("badge-evidence").innerText = `${keptCount} kept / ${decoyCount} excl`;
 
   let html = `<div class="section-title">
     <span>Corroborating Records (100-Block Radius)</span>
-    <span style="color: var(--accent-green); font-size: 11px;">PASS: 3 residential</span>
+    <span style="color: var(--accent-green); font-size: 11px;">PASS: ${keptCount} residential</span>
   </div>`;
 
   if (data.kept && data.kept.length > 0) {
@@ -334,7 +342,6 @@ function renderEvidenceTab(data) {
     });
   }
 
-  const decoyCount = data.excluded ? data.excluded.length : 0;
   html += `<div class="section-title" style="margin-top: 16px;">
     <span>Excluded Near-Matches (Filtered Decoys)</span>
     <span style="color: var(--accent-red); font-size: 11px;">REJECTED: ${decoyCount} Traps</span>
@@ -349,7 +356,7 @@ function renderEvidenceTab(data) {
             <span class="sim-score">Sim: ${Number(item.similarity || 0.75).toFixed(3)}</span>
           </div>
           <div class="card-body">
-            <div class="card-reason">⚠️ ${item.excluded_because || item.reason || 'Excluded'}</div>
+            <div class="card-reason">⚠️ ${item.excluded_because || 'Commercial property or closed enforcement case'}</div>
           </div>
         </div>
       `;
@@ -438,7 +445,7 @@ function renderTractSummary(t) {
       <div class="stat-label">[Modeled] Filings/Yr (Tract Median: ${t.median_tract_nonpayment_filings_modeled})</div>
     </div>
     <div class="stat-box">
-      <div class="stat-value">${t.no_vehicle_pct ?? t.no_vehicle_rate}%</div>
+      <div class="stat-value">${t.no_vehicle_pct}%</div>
       <div class="stat-label">No Vehicle Rate (Transit Barrier)</div>
     </div>
   `;
@@ -449,10 +456,26 @@ async function renderBriefTab() {
   document.getElementById("badge-brief").innerText = "Loading...";
 
   try {
-    const url = `${LIVE_API_BASE}/apps/navigator/users/${userId}/sessions/${sessionId}/artifacts/tenant_stabilization_brief.md`;
-    const resp = await fetch(url);
-    if (resp.ok) {
-      const briefText = await resp.text();
+    let briefText = "";
+    if (isMockMode) {
+      const resp = await fetch("mock/tenant_stabilization_brief.md");
+      if (resp.ok) {
+        briefText = await resp.text();
+      }
+    } else {
+      const url = `${LIVE_API_BASE}/apps/navigator/users/${userId}/sessions/${sessionId}/artifacts/tenant_stabilization_brief.md`;
+      const resp = await fetch(url);
+      if (resp.ok) {
+        try {
+          const data = await resp.json();
+          briefText = data.text || "";
+        } catch (e) {
+          briefText = await resp.text();
+        }
+      }
+    }
+
+    if (briefText) {
       caseData.briefContent = briefText;
       container.innerHTML = formatMarkdown(briefText);
       document.getElementById("badge-brief").innerText = "Ready";
@@ -462,63 +485,7 @@ async function renderBriefTab() {
     console.warn("Artifact fetch error:", err);
   }
 
-  // Fallback for mock mode or prior to generation
-  if (isMockMode) {
-    const briefMarkdown = `
-# Tenant Stabilization Brief
-**Case File:** Marisol V. · 1000 Block St. Nicholas Ave, Manhattan
-**Hearing:** Monday 9:30 AM · Urgency: Standard (134h remaining)
-**Prepared for:** Right-to-Counsel Supervising Attorney
-
----
-
-## 1. Corroborating Municipal Evidence (100-Block)
-- **NYC-19346354**: 1000 Block St. Nicholas Ave · HPD Class A Habitability Violation (MOLD) · Status: Open · Sim: 0.8147
-- **NYC-19346353**: 1000 Block St. Nicholas Ave · HPD Class B Habitability Violation (WATER LEAK) · Status: Open · Sim: 0.7703
-- **NYC-19346259**: 900 Block St. Nicholas Ave · HPD Class C Habitability Violation (HEATING SYSTEM ACCESS) · Status: Open · Sim: 0.6981
-
-### Filtered Decoys (Verified Excluded)
-- \`DECOY-NEWY-04\`: Closed – Abated (landlord replaced boiler, verified by inspector).
-- \`DECOY-NEWY-01\`: Commercial storefront (zero residential tenants).
-- \`DECOY-NEWY-05\`: Closed – Abated.
-- \`DECOY-NEWY-07\`: Closed – No Violation (heat at 71°F).
-
----
-
-## 2. Applicable Law & Procedural Defenses
-- **NY RPAPL § 711(2) & RPL § 235-b:** Nonpayment defense; requires 14-day written rent demand prerequisite; warranty of habitability rent abatement.
-- **NYC Admin. Code § 27-2115 & § 26-1302:** Mandatory 24-hour Class C repair window; free counsel for income ≤200% FPL.
-- **NY Social Services Law § 143-b (Spiegel Law):** Complete nonpayment defense where hazardous violations remain uncorrected.
-
----
-
-## 3. Emergency Relief Fund Matches
-1. **NYC Local Law 136 Right to Counsel & Spiegel Defense:** ELIGIBLE (Max: $4,000)
-2. **Emergency Repair Program Tenant Stabilization & Escrow Clinic:** ELIGIBLE (Max: $5,500)
-3. **NYC HRA One Shot Deal Emergency Assistance:** ELIGIBLE (Max: $15,000)
-4. **CityFHEPS Prevention & Housing Court Arrears Pathway:** ELIGIBLE (Max: $18,000)
-
----
-
-## 4. Evidentiary Boundary — What Public Record Cannot Prove
-- 100-block records corroborate building/cluster conditions, not interior unit leasehold facts.
-- Landlord's oral claim of boiler repair is unverified; attorney must petition for HPD emergency re-inspection.
-- Service of the 14-day written rent demand must be confirmed with tenant.
-
----
-
-## 5. Post-Output Equity Audit
-*Auto-generated after brief finalization by equity.py; excluded from all ranking & prompts.*
-- **Census Tract 36061024500:** Severe rent burden 32.8% vs. metro 25.2%.
-- **Transit Equity:** 91.6% zero-vehicle households → mandatory transit planning to 111 Centre St.
-- **Silent Distress Policy Safeguard:** High-burden immigrant tracts with low 311 reporting are routed to emergency repair inspection requests rather than denied assistance.
-    `;
-    caseData.briefContent = briefMarkdown;
-    container.innerHTML = formatMarkdown(briefMarkdown);
-    document.getElementById("badge-brief").innerText = "Ready";
-  } else {
-    container.innerHTML = `<p style="color: var(--text-muted); font-style: italic;">Tenant stabilization brief not yet drafted or unavailable.</p>`;
-    document.getElementById("badge-brief").innerText = "Pending";
-  }
+  container.innerHTML = `<p style="color: var(--text-muted); font-style: italic; padding: 24px 16px; text-align: center;">Tenant stabilization brief not yet drafted. Complete intake questions or click Turn 7 to draft the court brief.</p>`;
+  document.getElementById("badge-brief").innerText = "Pending";
 }
 

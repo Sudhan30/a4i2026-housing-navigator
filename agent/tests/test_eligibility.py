@@ -105,7 +105,7 @@ def test_bul_ny_01_fpl_income_matching():
     assert income_check["pass"] is True, "Household of 3 with $31k should pass <=200% FPL"
     assert b1["status"] == "ELIGIBLE"
 
-    # Test failing income ($60,000 > $49,720 for household of 3)
+    # Test failing income ($60,000 > $53,300 for household of 3)
     update_case(
         tool_context=tc,
         household_size=3,
@@ -117,5 +117,9 @@ def test_bul_ny_01_fpl_income_matching():
     income_check_high = next((c for c in b1_high["checks"] if "FPL" in c["rule"]), None)
     assert income_check_high is not None
     assert income_check_high["pass"] is False, "Household of 3 with $60k should fail <=200% FPL"
-    assert b1_high["status"] == "INELIGIBLE"
+    
+    fund_statuses = {f["bulletin_id"]: f["status"] for f in res_high["funds"]}
+    assert fund_statuses["BUL-NY-01"] == "INELIGIBLE", "BUL-NY-01 should be INELIGIBLE at $60k"
+    assert fund_statuses["BUL-NY-02"] == "INELIGIBLE", "BUL-NY-02 should be INELIGIBLE at $60k"
+    assert fund_statuses["BUL-NY-03"] == "INELIGIBLE", "BUL-NY-03 should be INELIGIBLE at $60k"
 

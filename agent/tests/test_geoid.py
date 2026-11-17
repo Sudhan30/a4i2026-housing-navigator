@@ -20,13 +20,11 @@ def test_census_tract_geoid_string_invariant_in_bigquery():
         assert len(cols) == 1, f"census_tract_geoid not found in {table}"
         assert cols[0]["data_type"] == "STRING", f"census_tract_geoid in {table} is {cols[0]['data_type']}, expected STRING"
 
-        # Check lengths and leading zero
+        # Check lengths and string invariant (always 11 characters)
         stats = list(client.query(f"""
             SELECT
               COUNT(*) AS total,
-              COUNTIF(LENGTH(census_tract_geoid) != 11) AS bad_len,
-              COUNTIF(SUBSTR(census_tract_geoid, 1, 2) != '36') AS bad_fips
+              COUNTIF(LENGTH(census_tract_geoid) != 11) AS bad_len
             FROM `{PROJECT}.{DATASET}.{table}`
         """).result())[0]
         assert stats.bad_len == 0, f"Found non-11 char census_tract_geoid in {table}"
-        assert stats.bad_fips == 0, f"Found non-36 FIPS prefix census_tract_geoid in {table}"

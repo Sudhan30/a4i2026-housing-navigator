@@ -1,5 +1,8 @@
 from datetime import date, datetime
+from zoneinfo import ZoneInfo
 from google.adk.tools import ToolContext
+
+NY_TZ = ZoneInfo("America/New_York")
 
 def open_case(block_address: str, hearing_datetime: str, hazards: list[str],
               tenant_narrative: str, tool_context: ToolContext,
@@ -16,13 +19,19 @@ def open_case(block_address: str, hearing_datetime: str, hazards: list[str],
     """
     try:
         hearing = datetime.fromisoformat(hearing_datetime.replace(" ", "T"))
+        if hearing.tzinfo is None:
+            hearing = hearing.replace(tzinfo=NY_TZ)
+        else:
+            hearing = hearing.astimezone(NY_TZ)
     except Exception:
-        hearing = datetime(2026, 11, 23, 9, 30)
+        hearing = datetime(2026, 11, 23, 9, 30, tzinfo=NY_TZ)
+    now_ny = datetime.now(NY_TZ)
+    hours = round((hearing - now_ny).total_seconds() / 3600, 1)
     case = {
         "block_address": block_address,
         "census_tract_geoid": census_tract_geoid,
         "hearing_datetime": hearing_datetime,
-        "hours_to_hearing": round((hearing - datetime.now()).total_seconds() / 3600, 1),
+        "hours_to_hearing": hours,
         "hazards": hazards,
         "tenant_narrative": tenant_narrative,
         "household": {},          # filled by update_case

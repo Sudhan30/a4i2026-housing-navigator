@@ -35,8 +35,8 @@ async def proxy_run(request: Request):
     resp = requests.post(url, data=body, headers=headers, timeout=120)
     return Response(content=resp.content, status_code=resp.status_code, media_type=resp.headers.get("content-type"))
 
-# Serve static frontend files
-static_dir = os.path.dirname(os.path.abspath(__file__))
+# Serve static frontend files only from public directory
+static_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), "public")
 app.mount("/", StaticFiles(directory=static_dir, html=True), name="static")
 
 if __name__ == "__main__":
