@@ -10,7 +10,8 @@
 |---|---|
 | **Metro Corridor** | **New York City** (`a4i_housing`, BigQuery location `US`, connection `us.a4i-vertex`, embedding endpoint `gemini-embedding-2`) |
 | **Track** | **Intake Triage & Emergency Relief Matching** (Connecting habitability records to housing court defense) |
-| **Live Agent Web UI** | [https://sq7-stabilization-navigator-530357188502.us-central1.run.app/dev-ui/](https://sq7-stabilization-navigator-530357188502.us-central1.run.app/dev-ui/) |
+| **Live Intake Desk Web App** | [https://sq7-intake-desk-530357188502.us-central1.run.app](https://sq7-intake-desk-530357188502.us-central1.run.app) |
+| **Live Agent Dev UI** | [https://sq7-stabilization-navigator-530357188502.us-central1.run.app/dev-ui/](https://sq7-stabilization-navigator-530357188502.us-central1.run.app/dev-ui/) |
 | **Live MCP Toolbox** | [https://sq7-mcp-toolbox-530357188502.us-central1.run.app](https://sq7-mcp-toolbox-530357188502.us-central1.run.app) |
 | **GCP Project** | `qwiklabs-gcp-03-ee26737d3114` (Region `us-central1`, Service Account: `530357188502-compute@developer.gserviceaccount.com`) |
 | **Rigor Evidence Pack** | [docs/rigor/README.md](docs/rigor/README.md) (All 11 criteria verified with reproducible logs & screenshots) |

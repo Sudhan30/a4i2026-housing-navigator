@@ -1,6 +1,6 @@
 // Stabilization Navigator - Intake Desk Client
 
-const LIVE_API_BASE = "https://sq7-stabilization-navigator-530357188502.us-central1.run.app";
+const LIVE_API_BASE = window.location.origin;
 let isMockMode = new URLSearchParams(window.location.search).get("mock") === "1";
 let mockTurns = [];
 let currentTurnIndex = 0;
