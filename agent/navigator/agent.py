@@ -7,6 +7,7 @@ from .tools.evidence import search_habitability_evidence
 from .tools.statutes import match_statutes
 from .tools.funds import match_relief_funds
 from .tools.brief import finalize_brief
+from .tools.caseload import list_open_cases
 from google.cloud import bigquery
 from .bq import run_query
 
@@ -44,7 +45,8 @@ def list_relief_programs() -> list[dict]:
 
 tools = [
     open_case, update_case, search_habitability_evidence, match_statutes,
-    match_relief_funds, finalize_brief
+    match_relief_funds, finalize_brief,
+    list_open_cases,
 ]
 
 toolbox_url = os.environ.get("TOOLBOX_URL")

@@ -74,7 +74,9 @@ def open_case(block_address: str, hearing_datetime: str, hazards: list[str],
     from ..config import EMERGENCY_HOURS
     urgency = f"EMERGENCY (<{EMERGENCY_HOURS}h)" if case["hours_to_hearing"] < EMERGENCY_HOURS else "standard"
     return {"status": "opened", "urgency": urgency, "hours_to_hearing": case["hours_to_hearing"],
-            "hearing": hearing.strftime("%A %b %d, %Y %I:%M %p")}
+            "hearing": hearing.strftime("%A %b %d, %Y %I:%M %p"),
+            "hearing_iso": hearing.strftime("%Y-%m-%dT%H:%M"),
+            "hearing_ts": int(hearing.timestamp())}
 
 def update_case(tool_context: ToolContext, household_size: int | None = None,
                 annual_income_usd: float | None = None, arrears_usd: float | None = None,

@@ -8,6 +8,8 @@ import {HAZARD_CLASS, hazardLabel, violationClass} from './Blocks';
 import {CourtForm} from './CourtForm';
 
 export type Draft = {
+  household?: Record<string, unknown>;
+  hearingIso?: string;
   hazards?: string[];
   narrative?: string;
   hearing?: string;

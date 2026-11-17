@@ -92,6 +92,63 @@ async def text_to_speech(request: Request):
     return Response(content=audio.audio_content, media_type="audio/mpeg")
 
 
+# ---- Saved cases (Google Firestore) -------------------------------------
+# One document per case in the "cases" collection. No tenant names or unit
+# numbers are stored: 100-block addresses only (see AGENTS.md rule 7).
+import re as _re
+from datetime import datetime as _dt, timezone as _tz
+
+_CASE_ID = _re.compile(r"^[A-Za-z0-9_-]{6,64}$")
+_SUMMARY_FIELDS = ("id", "block", "hearingAt", "hearingLabel", "status", "worstHazard",
+                   "nextAction", "recordCount", "eligibleFunds", "edited", "updatedAt", "title")
+_fs = None
+
+
+def _cases():
+    global _fs
+    if _fs is None:
+        from google.cloud import firestore
+        _fs = firestore.Client()
+    return _fs.collection("cases")
+
+
+@app.get("/api/cases")
+def list_cases():
+    docs = _cases().order_by("hearingAt").limit(100).stream()
+    out = []
+    for d in docs:
+        c = d.to_dict() or {}
+        if c.get("status") == "closed":
+            continue
+        out.append({k: c.get(k) for k in _SUMMARY_FIELDS})
+    return {"cases": out}
+
+
+@app.get("/api/cases/{case_id}")
+def get_case(case_id: str):
+    if not _CASE_ID.match(case_id):
+        return JSONResponse({"error": "bad id"}, status_code=400)
+    snap = _cases().document(case_id).get()
+    if not snap.exists:
+        return JSONResponse({"error": "not found"}, status_code=404)
+    return snap.to_dict()
+
+
+@app.put("/api/cases/{case_id}")
+async def save_case(case_id: str, request: Request):
+    if not _CASE_ID.match(case_id):
+        return JSONResponse({"error": "bad id"}, status_code=400)
+    raw = await request.body()
+    if len(raw) > 900_000:  # Firestore documents max out at 1 MiB
+        return JSONResponse({"error": "case too large"}, status_code=413)
+    import json as _json
+    data = _json.loads(raw)
+    data["id"] = case_id
+    data["updatedAt"] = _dt.now(_tz.utc).isoformat()
+    _cases().document(case_id).set(data)
+    return {"ok": True, "updatedAt": data["updatedAt"]}
+
+
 # Serve static frontend files only from public directory
 static_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), "public")
 app.mount("/", StaticFiles(directory=static_dir, html=True), name="static")

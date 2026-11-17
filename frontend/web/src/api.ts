@@ -46,9 +46,14 @@ export type TurnResult = {text: string; tools: ToolResult[]};
 export const IS_MOCK = new URLSearchParams(location.search).get('mock') === '1';
 const APP = 'navigator';
 const USER = 'intake-desk';
-export const SESSION_ID = `desk-${Date.now().toString(36)}`;
+export let SESSION_ID = `desk-${Date.now().toString(36)}`;
 
 let sessionReady: Promise<void> | null = null;
+/** Start a fresh agent session (used when switching or reopening cases). */
+export function resetSession() {
+  SESSION_ID = `desk-${Date.now().toString(36)}${Math.random().toString(36).slice(2, 6)}`;
+  sessionReady = null;
+}
 function ensureSession(): Promise<void> {
   sessionReady ??= fetch(`/apps/${APP}/users/${USER}/sessions/${SESSION_ID}`, {
     method: 'POST',
@@ -141,4 +146,43 @@ export async function speak(text: string, lang = 'en-US'): Promise<string> {
   });
   if (!r.ok) throw new Error(`Text-to-Speech failed (HTTP ${r.status})`);
   return URL.createObjectURL(await r.blob());
+}
+
+// ---- Saved cases (Firestore via frontend/server.py) ---------------------
+export type CaseSummary = {
+  id: string;
+  title?: string;
+  block?: string;
+  hearingAt?: number;
+  hearingLabel?: string;
+  status?: 'draft' | 'ready' | 'edited' | 'closed';
+  worstHazard?: string;
+  nextAction?: string;
+  recordCount?: number;
+  eligibleFunds?: number;
+  edited?: boolean;
+  updatedAt?: string;
+};
+
+export async function listCases(): Promise<CaseSummary[]> {
+  if (IS_MOCK) return [];
+  const r = await fetch('/api/cases');
+  if (!r.ok) throw new Error(`Could not load cases (HTTP ${r.status})`);
+  return (await r.json()).cases ?? [];
+}
+export async function getCase(id: string): Promise<any | null> {
+  const r = await fetch(`/api/cases/${encodeURIComponent(id)}`);
+  return r.ok ? r.json() : null;
+}
+export async function saveCase(id: string, data: unknown): Promise<void> {
+  if (IS_MOCK) return;
+  const r = await fetch(`/api/cases/${encodeURIComponent(id)}`, {
+    method: 'PUT',
+    headers: {'Content-Type': 'application/json'},
+    body: JSON.stringify(data),
+  });
+  if (!r.ok) throw new Error(`Could not save case (HTTP ${r.status})`);
+}
+export function newCaseId() {
+  return `case-${Date.now().toString(36)}${Math.random().toString(36).slice(2, 6)}`;
 }

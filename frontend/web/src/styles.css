@@ -347,3 +347,33 @@ code { font-family: var(--mono); font-size: 12px; }
 .clock-tag { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: .06em; background: rgba(255,255,255,.2); padding: 1px 6px; border-radius: 999px; }
 @media (max-width: 900px) { .clock-when { display: none; } }
 @media (max-width: 640px) { .case-line { display: none; } }
+
+/* Cases (Firestore) */
+.cases-btn {
+  all: unset; cursor: pointer; display: inline-flex; align-items: center; gap: 6px;
+  font-size: 13px; font-weight: 600; color: var(--color-text-primary);
+  padding: 6px 10px; border-radius: 8px; border: 1px solid var(--color-border); margin-right: 6px;
+}
+.cases-btn:hover { background: var(--color-background-muted); }
+.cases-btn:focus-visible { outline: 2px solid var(--brand); outline-offset: 2px; }
+.save-state { font-size: 12px; color: var(--color-text-secondary); margin-left: 6px; }
+.save-error { color: var(--bad); }
+.caseload { padding: 4px 0 16px; display: flex; flex-direction: column; gap: 12px; }
+.case-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 10px; }
+.case-row {
+  all: unset; box-sizing: border-box; width: 100%; cursor: pointer; display: flex; flex-direction: column; gap: 6px;
+  border: 1px solid var(--color-border); border-radius: 10px; padding: 12px 14px; background: var(--color-background-surface);
+}
+.case-row:hover { border-color: var(--brand); }
+.case-row:focus-visible { outline: 2px solid var(--brand); outline-offset: 2px; }
+.case-row.is-current { border-color: var(--brand); box-shadow: 0 0 0 1px var(--brand); }
+.case-top { display: flex; justify-content: space-between; align-items: center; gap: 8px; }
+.case-block { font-weight: 600; font-size: 14.5px; }
+.case-clock { font-size: 12px; font-weight: 700; padding: 2px 8px; border-radius: 999px; border: 1px solid; white-space: nowrap; }
+.clock-past { color: var(--color-text-secondary); border-color: var(--color-border); }
+.case-meta { display: flex; flex-wrap: wrap; gap: 4px 12px; font-size: 12.5px; color: var(--color-text-secondary); }
+.case-hazard { color: var(--bad); font-weight: 600; }
+.case-next { font-size: 13px; }
+.case-next-label { font-weight: 700; color: var(--brand); margin-right: 4px; }
+.case-foot { display: flex; align-items: center; gap: 8px; }
+.case-open-tag { font-size: 12px; color: var(--brand); font-weight: 600; }
