@@ -52,9 +52,17 @@ def render_brief_markdown(case: dict, memo_markdown: str) -> str:
     for e in case.get("evidence", []):
         opened = str(e.get("created_date", ""))[:10]
         sim = f"{float(e.get('similarity', 0)):.2f}"
+        raw_type = e.get("raw_complaint_type", "HPD Violation")
+        v_class = "Class A"
+        if "Class C" in raw_type or "CLASS C" in raw_type:
+            v_class = "Class C"
+        elif "Class B" in raw_type or "CLASS B" in raw_type:
+            v_class = "Class B"
+        elif "Class A" in raw_type or "CLASS A" in raw_type:
+            v_class = "Class A"
         evidence_rows.append(
             f"| `{e['request_id']}` | {e.get('block_address', block)} | "
-            f"{e.get('raw_complaint_type', 'HPD Violation')} | {e.get('inspection_status', 'Open')} | "
+            f"{v_class} · {raw_type} | {e.get('inspection_status', 'Open')} | "
             f"{opened} | {sim} |"
         )
     if not evidence_rows:

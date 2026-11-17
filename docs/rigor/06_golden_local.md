@@ -1,6 +1,6 @@
 # Local Golden Conversation Transcript — Mission M06
 
-**Date:** 2026-11-17 18:39:15  
+**Date:** 2026-11-17 20:41:29  
 **Agent:** `stabilization_navigator` (`gemini-2.5-flash`)  
 **Status:** All 7 Turns Completed & Verified  
 
@@ -9,60 +9,35 @@
 ## Turn 1
 **Dev:** *"New intake. Tenant on the 1000 block of St. Nicholas Ave, Manhattan. Nonpayment hearing Monday 9:30. Radiators cold since early Nov, black mold around the tub, water coming through the bathroom wall. Anything open on her block?"*  
 **Tools Called:** `open_case, search_habitability_evidence`  
-**Evaluation Status:** `WARN (missing: ['3+ corroborating records', 'request_ids'])`  
+**Evaluation Status:** `WARN (missing: ['3+ corroborating records', 'request_ids', 'reasons'])`  
 
 **Agent Response:**
 
-Okay, I've opened the case and found some corroborating public records on the tenant's block. The hearing is in 134.9 hours.
+137.8 hours to Monday's 9:30 AM calendar call.
 
-Here's what the public records show for the 1000 block of St. Nicholas Avenue:
+**Raw top 5 candidate matches before post-filtering**:
+*   Rank 1: `NYC-19346354`, Residential, Open - HPD Class Violation, similarity 0.8147
+*   Rank 2: `DECOY-NEWY-05`, Residential, Closed - Abated, similarity 0.8031
+*   Rank 3: `NYC-19350355`, Residential, Open - HPD Class Violation, similarity 0.7910
+*   Rank 4: `NYC-19350191`, Residential, Open - HPD Class Violation, similarity 0.7836
+*   Rank 5: `NYC-19346350`, Residential, Open - HPD Class Violation, similarity 0.7831
 
-**Top 5 Candidate Matches (before filtering):**
-1.  `NYC-19346354` (Residential, Open - HPD Class Violation, Similarity: 0.8147)
-2.  `DECOY-NEWY-05` (Residential, Closed - Abated, Similarity: 0.8031)
-3.  `NYC-19350355` (Residential, Open - HPD Class Violation, Similarity: 0.7910)
-4.  `NYC-19350191` (Residential, Open - HPD Class Violation, Similarity: 0.7836)
-5.  `NYC-19346350` (Residential, Open - HPD Class Violation, Similarity: 0.7831)
+Three open violations corroborate block conditions for mold, water leak, and heating system access.
+*   **Mold**: `NYC-19346354` on 1000 Block St Nicholas Avenue, HPD Class A, Open, created 2026-11-01.
+*   **Water Leak**: `NYC-19346353` on 1000 Block St Nicholas Avenue, HPD Class B, Open, created 2026-11-01.
+*   **Heating System Access**: `NYC-19346259` on 900 Block St Nicholas Avenue, HPD Class C, Open, created 2026-11-01.
 
-**Kept Corroborating Records (on the 100-block):**
-These records corroborate conditions on the block or building cluster, not inside the tenant's unit.
+**Excluded: 8 records**:
+*   `DECOY-NEWY-05` (similarity 0.8031): Closed – Abated — condition was repaired and re-inspected; not an active hazard.
+*   `NYC-19350355` (similarity 0.791): Outside the 800 m corroboration radius from the tenant's block.
+*   `NYC-19350191` (similarity 0.7836): Outside the 800 m corroboration radius from the tenant's block.
+*   `NYC-19346350` (similarity 0.7831): Outside the 800 m corroboration radius from the tenant's block.
+*   `DECOY-NEWY-02` (similarity 0.7736): Commercial property — no residential tenants; cannot support a residential habitability defense.
+*   `NYC-19350323` (similarity 0.7714): Outside the 800 m corroboration radius from the tenant's block.
+*   `NYC-19350315` (similarity 0.7712): Outside the 800 m corroboration radius from the tenant's block.
+*   `DECOY-NEWY-01` (similarity 0.7689): Commercial property — no residential tenants; cannot support a residential habitability defense.
 
-*   **Mold around tub:** `NYC-19346354`
-    *   Block: 1000 Block St Nicholas Avenue
-    *   HPD Class: A HABITABILITY VIOLATION (MOLD)
-    *   Status: Open - HPD Class Violation
-    *   Created: 2026-11-01
-    *   Similarity: 0.8147
-
-*   **Water leak through wall:** `NYC-19346353`
-    *   Block: 1000 Block St Nicholas Avenue
-    *   HPD Class: B HABITABILITY VIOLATION (WATER LEAK)
-    *   Status: Open - HPD Class Violation
-    *   Created: 2026-11-01
-    *   Similarity: 0.7703
-
-*   **No heat (boiler access):** `NYC-19346259`
-    *   Block: 900 Block St Nicholas Avenue (nearby)
-    *   HPD Class: C HABITABILITY VIOLATION (HEATING SYSTEM ACCESS)
-    *   Status: Open - HPD Class Violation
-    *   Created: 2026-11-01
-    *   Similarity: 0.6981
-
-**Excluded: 8 records**
-These records were excluded for various reasons:
-*   `DECOY-NEWY-05` (Similarity: 0.8031): Closed – Abated — condition was repaired and re-inspected; not an active hazard. Labeled [Planted Case] teaching decoy.
-*   `NYC-19350355` (Similarity: 0.791): Outside the 800 m corroboration radius from the tenant's block.
-*   `NYC-19350191` (Similarity: 0.7836): Outside the 800 m corroboration radius from the tenant's block.
-*   `NYC-19346350` (Similarity: 0.7831): Outside the 800 m corroboration radius from the tenant's block.
-*   `DECOY-NEWY-02` (Similarity: 0.7736): Commercial property — no residential tenants; cannot support a residential habitability defense. Labeled [Planted Case] teaching decoy.
-*   `NYC-19350323` (Similarity: 0.7714): Outside the 800 m corroboration radius from the tenant's block.
-*   `NYC-19350315` (Similarity: 0.7712): Outside the 800 m corroboration radius from the tenant's block.
-*   `DECOY-NEWY-01` (Similarity: 0.7689): Commercial property — no residential tenants; cannot support a residential habitability defense. Labeled [Planted Case] teaching decoy.
-
-**What the record can't prove yet:**
-*   Whether these specific conditions exist inside the tenant's unit.
-*   Whether the boiler issue on the 900 block is directly impacting the tenant's building.
-*   The exact start date of the tenant's heat issues.
+**What the record can't prove yet:** Whether the Class C heating system access violation at 900 Block St Nicholas Avenue directly affects the tenant's specific unit.
 
 ---
 
@@ -73,7 +48,9 @@ These records were excluded for various reasons:
 
 **Agent Response:**
 
-You're likely referring to `DECOY-NEWY-01`. That record was excluded because it was a **Commercial property** with no residential tenants, so it cannot support a residential habitability defense.
+The boiler record `DECOY-NEWY-01` (similarity 0.7689) was excluded because it pertains to a commercial property. It describes an emergency boiler shutdown in a commercial retail warehouse storefront with zero residential tenants, which cannot support a residential habitability defense.
+
+**What the record can't prove yet:** Whether the open Class C heating system access violation on the 900 block is causing the tenant's no-heat condition.
 
 ---
 
@@ -84,19 +61,11 @@ You're likely referring to `DECOY-NEWY-01`. That record was excluded because it 
 
 **Agent Response:**
 
-The tenant's situation is covered by several laws, and the attorney will confirm their applicability:
+The tenant's claims are covered under several laws. RPL § 235-b establishes the Warranty of Habitability, entitling tenants to a rent abatement for conditions dangerous or detrimental to life, health, or safety. The NYC Admin Code § 27-2115 categorizes violations, with Class C (like the heating system issue) requiring correction within 24 hours and Class B (like the water leak) within 30 days. Finally, the Spiegel defense (SSL § 143-b) provides a complete defense against nonpayment eviction for uncorrected, rent-impairing violations.
 
-*   **NYC Admin. Code § 26-1302 & § 27-2115 (NYC Right to Counsel & Housing Maintenance Code Hazard Classes):** This guarantees free legal counsel in housing court for eligible households and establishes hazard classes. Class C violations (like the lack of heat) must be corrected within 24 hours, and Class B violations (like water leaks) within 30 days.
-*   **NY RPAPL § 711(2) & RPL § 235-b (New York 14-Day Written Rent Demand & Warranty of Habitability):** This law requires a 14-day written rent demand before a nonpayment filing and grants tenants a right to rent abatement for conditions that are dangerous, hazardous, or detrimental to health and safety.
-*   **NY Social Services Law § 143-b & MDL § 302-a (Spiegel Law & Rent-Impairing Violation Complete Defense):** This law can provide a complete defense against nonpayment eviction if there are uncorrected, official hazardous or rent-impairing residential building violations.
+Crucially, the record cannot prove whether the tenant received the required 14-day written rent demand, as mandated by RPAPL § 711(2), prior to the nonpayment filing.
 
-**Procedural Checks for the Attorney:**
-*   **Ask whether she received the 14-day written demand (RPAPL § 711(2)).** The record can't tell us this.
-*   The attorney should compare the violation created dates with the required correction timelines (24 hours for Class C, 30 days for Class B).
-
-**What the record can't prove yet:**
-*   Whether the tenant received a 14-day written rent demand.
-*   The exact dates of any repairs or abatement of the violations.
+**What the record can't prove yet:** Whether the tenant received a 14-day written rent demand.
 
 ---
 
@@ -107,58 +76,34 @@ The tenant's situation is covered by several laws, and the attorney will confirm
 
 **Agent Response:**
 
-Okay, I've updated the case with the household details:
-*   Household size: 3
-*   Annual income: $31,000 USD
-*   Court index number: Yes
+The household facts have been updated. The tenant's daughter's asthma has been noted for the attorney, but is not used in eligibility calculations.
 
-The detail about your daughter's asthma has been recorded in the case notes for the attorney; it is not used as an eligibility input for relief funds.
+Four relief funds are ELIGIBLE for this household:
+1.  **Emergency Repair Program Tenant Stabilization & Escrow Clinic**: ELIGIBLE. Requires open habitability case (3 records found) and covers heat and mold hazards. Max award $5,500.
+2.  **NYC Local Law 136 Right to Counsel & HPD Class C Spiegel Defense**: ELIGIBLE. Tenant income of $31,000 is within 200% FPL for a household of 3 ($53,300 limit), and there are open habitability cases. Max award $4,000.
+3.  **NYC Human Resources Administration Emergency Assistance (One Shot Deal)**: ELIGIBLE. Income is within limits. Max award $15,000.
+4.  **CityFHEPS Prevention & Housing Court Arrears Pathway**: ELIGIBLE. Income is within limits, and the tenant has a Housing Court index number. Max award $18,000.
 
-Based on this information, here are the emergency relief programs the household may qualify for:
-
-*   **NYC Human Resources Administration Emergency Assistance (One Shot Deal)**
-    *   Status: ELIGIBLE
-    *   Checks: Residential tenant ✅
-    *   Max Award: $15,000 (More than enough to cover typical arrears, but specific amount depends on need.)
-
-*   **NYC DSS Homebase Network - CityFHEPS Prevention & Housing Court Arrears Pathway**
-    *   Status: ELIGIBLE
-    *   Checks: Residential tenant ✅, Income ≤200% FPL ($31,000 vs limit $53,300 for a household of 3) ✅, Tenant holds Housing Court index number ✅
-    *   Max Award: $18,000
-
-*   **The Legal Aid Society of New York - NYC Local Law 136 Right to Counsel & HPD Class C Spiegel Defense**
-    *   Status: ELIGIBLE
-    *   Checks: Residential tenant ✅, Income ≤200% FPL ($31,000 vs limit $53,300 for a household of 3) ✅, 3 open residential HPD/311 record(s) on/near block (attorney must confirm at least one is in the tenant's building) ✅
-
-*   **BronxWorks & RiseBoro Legal Clinic - Emergency Repair Program Tenant Stabilization & Escrow Clinic**
-    *   Status: ELIGIBLE
-    *   Checks: Residential tenant ✅, 3 open residential HPD/311 record(s) on/near block (attorney must confirm at least one is in the tenant's building) ✅, Case hazards include heat and mold ✅
-    *   Max Award: $5,500
-
-**What the record can't prove yet:**
-*   Whether the open HPD/311 records on the block are specifically for the tenant's building.
-*   The exact amount of arrears, which will determine the specific award from programs like One Shot Deal.
+**What the record can't prove yet:** Whether any of the three open habitability violations are specifically located within the tenant's building.
 
 ---
 
 ## Turn 5
 **Dev:** *"How bad is this neighborhood compared to the city?"*  
-**Tools Called:** `get_tract_context`  
-**Evaluation Status:** `PASS`  
+**Tools Called:** `find_tract_for_block, get_tract_context`  
+**Evaluation Status:** `WARN (missing: ['196', '[Modeled]'])`  
 
 **Agent Response:**
 
-Here's some neighborhood context for the tenant's census tract, compared to the broader metro area:
+The tenant's census tract (36061024500) shows higher indicators of housing instability compared to the metro average.
 
-*   **Severe Rent Burden:** 32.8% of households in this tract experience severe rent burden (paying 50%+ of income for rent), which is higher than the metro average of 25.2%.
-*   **[Modeled] Annual Eviction Filings:** There are 414 [Modeled] non-payment eviction filings annually in this tract, significantly higher than the median of 195 [Modeled] filings for tracts in the area.
-*   **Poverty Rate:** The poverty rate in this tract is 21%.
-*   **Vehicle Access:** 91.6% of households in this tract have no vehicle.
-*   **Open Residential 311 Complaints:** There are 12 open residential 311 complaints in this tract.
+*   **Severe Rent Burden**: 32.8% of households experience severe rent burden, notably higher than the metro average of 25.2%.
+*   **Modeled Eviction Filings**: There are 414 modeled nonpayment filings annually, significantly higher than the median of 195. Modeled holdover filings are 78, and modeled default judgments are 157.
+*   **311 Complaints**: There are 12 open residential 311 complaints in the tract.
+*   **Vehicle Access**: 91.6% of households have no vehicle, indicating potential transportation barriers.
+*   **Poverty**: The poverty rate is 21%.
 
-**What the record can't prove yet:**
-*   Whether these statistics directly reflect the conditions within the tenant's specific building.
-*   The personal circumstances of the tenant beyond what was provided.
+**What the record can't prove yet:** The specific number of residential 311 complaints directly related to the tenant's building.
 
 ---
 
@@ -169,13 +114,9 @@ Here's some neighborhood context for the tenant's census tract, compared to the 
 
 **Agent Response:**
 
-The public record shows the Class C heating system access violation (`NYC-19346259`) is still open as of 2026-11-01 data. Whether it's been fixed or not cannot be verified from this public data.
+Public record shows Class C still open as of 2026-11-01 data. Fixed-or-not can't be verified from this data. Request HPD re-inspection and a dated photo or log from the tenant.
 
-For the attorney, it would be advisable to request an HPD re-inspection and a dated photo or log from the tenant as proof of repair.
-
-**What the record can't prove yet:**
-*   Whether the landlord actually fixed the boiler last week.
-*   The current heating status inside the tenant's unit.
+**What the record can't prove yet:** Whether the boiler was actually repaired last week.
 
 ---
 
@@ -186,15 +127,8 @@ For the attorney, it would be advisable to request an HPD re-inspection and a da
 
 **Agent Response:**
 
-The Tenant Stabilization Brief has been finalized and saved as `tenant_stabilization_brief.md`.
+The Tenant Stabilization Brief has been finalized and saved as `tenant_stabilization_brief.md`. It includes the following sections: Corroborating public records, Applicable law, Emergency relief fund matches, Neighborhood context, Evidentiary boundary, this Intake memo, and a code-rendered Equity audit.
 
-It includes the following sections:
-*   Corroborating public records
-*   Applicable law
-*   Emergency relief match
-*   Neighborhood context
-*   Evidentiary boundary
-*   Intake memo (drafted by me)
-*   Code-rendered Equity audit
+**What the record can't prove yet:** Whether the tenant received a 14-day written rent demand as required by RPAPL § 711(2).
 
 ---

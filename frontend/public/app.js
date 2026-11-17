@@ -30,7 +30,7 @@ const GOLDEN_TURNS = [
   {
     turn: 2,
     title: "2. Vector Exclusions & Decoy Traps",
-    prompt: "Why did you drop that boiler record from early November on St. Nicholas Ave?"
+    prompt: "Why did you drop the #2 result? It looked like a strong match."
   },
   {
     turn: 3,
@@ -109,9 +109,15 @@ function setupEventListeners() {
   document.getElementById("print-brief-btn").addEventListener("click", () => window.print());
   document.getElementById("download-brief-btn").addEventListener("click", downloadBrief);
 
-  // Voice Mic Button (M17 Web Speech Hook)
+  // Voice Mic Button & Language Toggle (M17 Web Speech API)
+  const micLangBtn = document.getElementById("mic-lang-btn");
+  if (micLangBtn) {
+    micLangBtn.addEventListener("click", toggleMicLanguage);
+  }
   const micBtn = document.getElementById("mic-btn");
-  micBtn.addEventListener("click", handleMicClick);
+  if (micBtn) {
+    micBtn.addEventListener("click", handleMicClick);
+  }
 }
 
 function toggleDrawer() {
@@ -188,9 +194,10 @@ function appendMessage(role, text, inlineData = null) {
   let formattedHtml = escapeHtml(text).replace(/\n/g, "<br>");
   
   // Highlight invariant: **What the record can't prove yet:**
-  const invariantPrefix = "What the record can't prove yet:";
   const invariantMatch = text.match(/\*\*What the record can't prove yet:\*\*\s*(.+)/i) || 
-                         text.match(/What the record can't prove yet:\s*(.+)/i);
+                         text.match(/What the record can't prove yet:\s*(.+)/i) ||
+                         text.match(/\*\*Lo que el registro a[úu]n no puede probar:\*\*\s*(.+)/i) ||
+                         text.match(/Lo que el registro a[úu]n no puede probar:\s*(.+)/i);
   if (invariantMatch && invariantMatch[1]) {
     const boundaryText = invariantMatch[1].trim();
     if (!state.boundaries.includes(boundaryText)) {
@@ -200,8 +207,8 @@ function appendMessage(role, text, inlineData = null) {
     
     // Replace in message with styled callout
     formattedHtml = formattedHtml.replace(
-      /\*\*What the record can't prove yet:\*\*[\s\S]+/i,
-      `<div class="invariant-box"><strong>What the record can't prove yet:</strong>${escapeHtml(boundaryText)}</div>`
+      /(\*\*What the record can't prove yet:\*\*|\*\*Lo que el registro a[úu]n no puede probar:\*\*|What the record can't prove yet:|Lo que el registro a[úu]n no puede probar:)[\s\S]+/i,
+      `<div class="invariant-box"><strong>What the record can't prove yet:</strong> ${escapeHtml(boundaryText)}</div>`
     );
   }
 
@@ -498,6 +505,13 @@ function highlightSection(secId) {
   sec.classList.add("section-updated");
 }
 
+function extractViolationClass(rawType) {
+  if (!rawType) return "Class A";
+  const m = rawType.match(/Class\s+([A-C])/i);
+  if (m) return `Class ${m[1].toUpperCase()}`;
+  return rawType;
+}
+
 function updateBriefEvidenceSection() {
   const container = document.getElementById("content-sec-evidence");
   let html = `<p>Semantic vector search identified public 311 habitability violations within a 100-block radius of 1000 St. Nicholas Ave. Relational filtering verified open residential enforcement:</p>`;
@@ -509,11 +523,13 @@ function updateBriefEvidenceSection() {
       </thead>
       <tbody>`;
     state.keptEvidence.forEach(item => {
+      const vClass = extractViolationClass(item.raw_complaint_type);
+      const opened = item.created_date ? String(item.created_date).substring(0, 10) : 'Nov 1';
       html += `<tr>
         <td><code>${escapeHtml(item.request_id)}</code></td>
-        <td><strong>${escapeHtml(item.hpd_class || 'Class A')}</strong> · ${escapeHtml(item.raw_complaint_type || 'mold')}</td>
+        <td><strong>${escapeHtml(vClass)}</strong> · ${escapeHtml(item.raw_complaint_type || 'Habitability')}</td>
         <td>${escapeHtml(item.block_address || '1000 Block St. Nicholas Ave')}</td>
-        <td>Open (${escapeHtml(item.created_date || 'Nov 1')})</td>
+        <td>Open (${escapeHtml(opened)})</td>
       </tr>`;
     });
     html += `</tbody></table>`;
@@ -536,8 +552,11 @@ function updateBriefLawSection() {
   if (state.statutes.length > 0) {
     html += `<ul>`;
     state.statutes.forEach(st => {
+      const citation = st.code_citation || st.statute_code || st.statute_id || 'Statute';
+      const title = st.ordinance_title || st.statute_title || '';
+      const remedy = st.raw_statute_text || st.statutory_remedy || '';
       html += `<li>
-        <strong>${escapeHtml(st.statute_code || st.statute_id)}:</strong> ${escapeHtml(st.statute_title)} — ${escapeHtml(st.statutory_remedy)}
+        <strong>${escapeHtml(citation)}:</strong> ${escapeHtml(title)}${remedy ? ' — ' + escapeHtml(remedy) : ''}
       </li>`;
     });
     html += `</ul>`;
@@ -730,14 +749,88 @@ function downloadBrief() {
   URL.revokeObjectURL(url);
 }
 
+// -------------------------------------------------------------------------
+// M17: Voice Input via Web Speech API (Dictation, EN/ES toggle, no auto-send)
+// -------------------------------------------------------------------------
+let speechLang = "en-US"; // "en-US" or "es-US"
+let recognition = null;
+let isRecognizing = false;
+
+function toggleMicLanguage() {
+  const langBtn = document.getElementById("mic-lang-btn");
+  if (!langBtn) return;
+  if (speechLang === "en-US") {
+    speechLang = "es-US";
+    langBtn.textContent = "ES";
+    langBtn.title = "Dictation Language: Spanish (Click to toggle EN/ES)";
+  } else {
+    speechLang = "en-US";
+    langBtn.textContent = "EN";
+    langBtn.title = "Dictation Language: English (Click to toggle EN/ES)";
+  }
+  if (isRecognizing && recognition) {
+    recognition.abort();
+  }
+}
+
 function handleMicClick() {
   const micBtn = document.getElementById("mic-btn");
-  const isPressed = micBtn.getAttribute("aria-pressed") === "true";
-  micBtn.setAttribute("aria-pressed", isPressed ? "false" : "true");
-  if (!isPressed) {
-    micBtn.title = "Listening (Dictation enabled in M17)...";
-  } else {
-    micBtn.title = "Dictate via Speech (Press to speak)";
+  const input = document.getElementById("chat-input");
+
+  const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+  if (!SpeechRecognition) {
+    alert("Web Speech API is not supported in this browser. Please type into the input box.");
+    return;
+  }
+
+  if (isRecognizing && recognition) {
+    recognition.stop();
+    return;
+  }
+
+  try {
+    recognition = new SpeechRecognition();
+    recognition.lang = speechLang;
+    recognition.continuous = false;
+    recognition.interimResults = false;
+
+    recognition.onstart = () => {
+      isRecognizing = true;
+      micBtn.setAttribute("aria-pressed", "true");
+      micBtn.title = `Listening (${speechLang === 'es-US' ? 'Spanish' : 'English'})... Speak now.`;
+    };
+
+    recognition.onresult = (event) => {
+      const transcript = event.results[0][0].transcript.trim();
+      if (!transcript) return;
+      
+      // Fill the input box without auto-sending
+      if (speechLang === "es-US") {
+        input.value = `[Tenant, in Spanish]: ${transcript}`;
+      } else {
+        input.value = input.value ? `${input.value} ${transcript}` : transcript;
+      }
+      input.focus();
+    };
+
+    recognition.onerror = (event) => {
+      console.warn("Speech recognition error:", event.error);
+      isRecognizing = false;
+      micBtn.setAttribute("aria-pressed", "false");
+      micBtn.title = "Dictate via Speech (Press to speak)";
+    };
+
+    recognition.onend = () => {
+      isRecognizing = false;
+      micBtn.setAttribute("aria-pressed", "false");
+      micBtn.title = "Dictate via Speech (Press to speak)";
+    };
+
+    recognition.start();
+  } catch (err) {
+    console.error("Speech recognition startup error:", err);
+    isRecognizing = false;
+    micBtn.setAttribute("aria-pressed", "false");
   }
 }
 
