@@ -4,7 +4,7 @@ import {Button} from '@astryxdesign/core/Button';
 import {Markdown} from '@astryxdesign/core/Markdown';
 import {Text} from '@astryxdesign/core/Text';
 import type {Evidence, Fund, Statute, Tract} from './api';
-import {hazardLabel, violationClass} from './Blocks';
+import {HAZARD_CLASS, hazardLabel, violationClass} from './Blocks';
 import {CourtForm} from './CourtForm';
 
 export type Draft = {
@@ -25,7 +25,7 @@ function draftMarkdown(d: Draft): string {
     d.evidence
       ? (d.evidence.kept ?? []).length
         ? (d.evidence.kept ?? [])
-            .map(r => `- \`${r.request_id}\` · ${violationClass(r.raw_complaint_type ?? '') ?? ''} ${hazardLabel(r)} · ${(r.block_address ?? '').split(',')[0]} · open since ${r.created_date}`)
+            .map(r => `- \`${r.request_id}\` · ${hazardLabel(r)} (${HAZARD_CLASS[violationClass(r.raw_complaint_type ?? '') ?? '']?.label ?? 'unclassified'}) · ${(r.block_address ?? '').split(',')[0]} · open since ${r.created_date}`)
             .join('\n') +
           `\n\n_${(d.evidence.excluded ?? []).length} look-alikes set aside by the rules._`
         : '_No open residential record near the block._'
@@ -104,44 +104,14 @@ function BriefBody({draft, brief, block, hours, edits}: BriefProps) {
     if (!node) return;
     setPdfBusy(true);
     try {
-      const html2pdf = (await import('html2pdf.js')).default;
-      const clone = node.cloneNode(true) as HTMLElement;
-      clone.removeAttribute('contenteditable');
-      clone.querySelectorAll('[contenteditable]').forEach(n => n.removeAttribute('contenteditable'));
-      clone.classList.add('cf-print');
-      const host = Object.assign(document.createElement('div'), {className: 'pdf-host'});
-      host.appendChild(clone);
-      document.body.appendChild(host);
-      const fix = document.createElement('style');
-      fix.textContent = 'img:not(.records-map img){display:inline !important;vertical-align:baseline !important}';
-      document.head.appendChild(fix);
-      try {
-      await html2pdf()
-        .set({
-          margin: [10, 10, 12, 10],
-          filename: 'tenant_stabilization_worksheet.pdf',
-          image: {type: 'jpeg', quality: 0.95},
-          html2canvas: {
-            scale: 2,
-            useCORS: true,
-            backgroundColor: '#ffffff',
-            // Astryx's reset makes <img> display:block, which shifts html2canvas text baselines.
-            // Undo it only in the cloned document that html2canvas renders.
-            onclone: (doc: Document) => {
-              const st = doc.createElement('style');
-              st.textContent = 'img{display:inline !important;vertical-align:baseline !important}';
-              doc.head.appendChild(st);
-            },
-          },
-          jsPDF: {unit: 'mm', format: 'letter', orientation: 'portrait'},
-          pagebreak: {mode: ['css', 'legacy'], avoid: ['tr', '.cf-sec h3', '.cf-sign']},
-        })
-        .from(clone)
-        .save();
-      } finally {
-        fix.remove();
-        host.remove();
-      }
+      const {buildFillablePdf} = await import('./fillablePdf');
+      const bytes = await buildFillablePdf(node);
+      const url = URL.createObjectURL(new Blob([bytes as BlobPart], {type: 'application/pdf'}));
+      const a = Object.assign(document.createElement('a'), {href: url, download: 'tenant_stabilization_worksheet.pdf'});
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      setTimeout(() => URL.revokeObjectURL(url), 5000);
     } finally {
       setPdfBusy(false);
     }
@@ -190,7 +160,7 @@ function BriefBody({draft, brief, block, hours, edits}: BriefProps) {
             onClick={() => edits.start(showingEdits ? editor.current?.innerHTML ?? '' : live.current?.innerHTML ?? '')}
           />
         )}
-        <Button label={pdfBusy ? 'Preparing PDF…' : 'Download PDF'} variant="secondary" size="sm" isDisabled={pdfBusy || edits.editing} onClick={downloadPdf} />
+        <Button label={pdfBusy ? 'Preparing PDF…' : 'Download fillable PDF'} variant="secondary" size="sm" isDisabled={pdfBusy || edits.editing} onClick={downloadPdf} />
         <Button label="Copy text" variant="ghost" size="sm" onClick={() => navigator.clipboard.writeText(text())} />
         {showingEdits && !edits.editing && <Button label="Discard edits" variant="ghost" size="sm" onClick={edits.discard} />}
       </div>

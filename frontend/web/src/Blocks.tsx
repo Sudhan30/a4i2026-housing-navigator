@@ -3,11 +3,9 @@ import {Collapsible} from '@astryxdesign/core/Collapsible';
 import {Text} from '@astryxdesign/core/Text';
 import type {Evidence, Fund, Record311} from './api';
 import {RecordsMap} from './RecordsMap';
+import {HAZARD_CLASS, violationClass} from './hazards';
+export {HAZARD_CLASS, violationClass} from './hazards';
 
-export function violationClass(type: string): string | null {
-  const m = (type ?? '').match(/CLASS\s+([ABC])\b/i);
-  return m ? `Class ${m[1].toUpperCase()}` : null;
-}
 
 const HAZARDS: [RegExp, string][] = [
   [/HEATING|BOILER|RADIATOR|\bHEAT\b/i, 'Heating system'],
@@ -63,9 +61,15 @@ export function EvidenceBlock({evidence}: {evidence: Evidence}) {
                         <code>{r.request_id}</code> · {shortBlock(r.block_address ?? '')}{r.created_date ? ` · open since ${shortDate(r.created_date)}` : ''}
                       </span>
                     </span>
-                    {violationClass(r.raw_complaint_type ?? '') && (
-                      <Badge variant="success" label={violationClass(r.raw_complaint_type ?? '')!} />
-                    )}
+                    {(() => {
+                      const c = HAZARD_CLASS[violationClass(r.raw_complaint_type ?? '') ?? ''];
+                      return c ? (
+                        <span className="hz">
+                          <Badge variant={c.variant} label={c.label} />
+                          <span className="hz-deadline">{c.deadline}</span>
+                        </span>
+                      ) : null;
+                    })()}
                   </span>
                 }
               >

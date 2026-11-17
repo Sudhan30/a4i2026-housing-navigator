@@ -1,6 +1,6 @@
 import {Markdown} from '@astryxdesign/core/Markdown';
 import type {Draft} from './BriefDrawer';
-import {hazardLabel, shortReason, violationClass} from './Blocks';
+import {HAZARD_CLASS, hazardLabel, shortReason, violationClass} from './Blocks';
 
 /**
  * A court-paper style worksheet the paralegal hands to the supervising attorney.
@@ -18,7 +18,7 @@ const CONDITIONS: [string, RegExp][] = [
 
 const DEFENSES: [string, string, RegExp][] = [
   ['Warranty of habitability; rent abatement', 'RPL § 235-b', /235-b/],
-  ['Hazard repair deadlines (Class C 24 h, Class B 30 days)', 'NYC Admin. Code § 27-2115', /27-2115/],
+  ['Landlord repair deadlines (immediately hazardous: 24 h; hazardous: 30 days)', 'NYC Admin. Code § 27-2115', /27-2115/],
   ['Complete defense while rent-impairing violations persist (Spiegel)', 'SSL § 143-b', /143-b/],
   ['Right to counsel', 'NYC Admin. Code § 26-1302', /26-1302/],
   ['Landlord served the 14-day written rent demand (prerequisite; confirm with tenant)', 'RPAPL § 711(2)', /$^/],
@@ -107,12 +107,18 @@ export function CourtForm({
           kept.length ? (
             <table className="cf-table">
               <thead>
-                <tr><th>Class</th><th>Condition</th><th>Record no.</th><th>Location</th><th>Open since</th></tr>
+                <tr><th>Hazard (HPD class)</th><th>Condition</th><th>Record no.</th><th>Location</th><th>Open since</th></tr>
               </thead>
               <tbody>
                 {kept.map(r => (
                   <tr key={r.request_id}>
-                    <td className="cf-class">{violationClass(r.raw_complaint_type ?? '')?.replace('Class ', '') ?? '—'}</td>
+                    <td className="cf-class">
+                      {(() => {
+                        const k = violationClass(r.raw_complaint_type ?? '') ?? '';
+                        const c = HAZARD_CLASS[k];
+                        return c ? `${c.label} (${k.replace('Class ', '')}) · ${c.deadline}` : '—';
+                      })()}
+                    </td>
                     <td>{hazardLabel(r)}</td>
                     <td className="cf-mono">{r.request_id}</td>
                     <td>{(r.block_address ?? '').split(',')[0]}</td>

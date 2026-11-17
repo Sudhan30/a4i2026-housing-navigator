@@ -105,6 +105,12 @@ export default function App() {
   const [value, setValue] = useState('');
   const [lang, setLang] = useState<'en-US' | 'es-US'>('en-US');
   const [hours, setHours] = useState<number | null>(null);
+  const [hearingAt, setHearingAt] = useState<number | null>(null);
+  const [, tick] = useState(0);
+  useEffect(() => {
+    const t = setInterval(() => tick(x => x + 1), 60_000);
+    return () => clearInterval(t);
+  }, []);
   const [urgent, setUrgent] = useState(false);
   const [block, setBlock] = useState<string | null>(null);
   const [draft, setDraft] = useState<Draft>({cantProve: []});
@@ -181,6 +187,9 @@ export default function App() {
     setDraft(d => {
       const n: Draft = {...d, cantProve: [...d.cantProve]};
       for (const {name, response: r} of tools) {
+        if (name === 'open_case' && r && typeof r.hours_to_hearing === 'number') {
+          setHearingAt(Date.now() + r.hours_to_hearing * 3600_000);
+        }
         if (name === 'open_case' && r) {
           const a = tools.find(t => t.name === 'open_case')?.args;
           if (a?.hazards) n.hazards = a.hazards;
@@ -246,11 +255,8 @@ export default function App() {
           <span className="brand-sub">Housing-court intake partner</span>
         </div>
         <div className="topbar-right">
-          {hours !== null && (
-            <span className={`case-line ${urgent ? 'is-urgent' : ''}`}>
-              {block ?? 'Open case'} · hearing in {Math.round(hours)} h
-            </span>
-          )}
+          {hearingAt !== null && <span className="case-line">{block ?? 'Open case'}</span>}
+          {hearingAt !== null && <HearingClock at={hearingAt} label={draft.hearing ?? null} />}
           {!wide && <Button
             label={`Brief ${sectionsReady}/5`}
             variant={brief ? 'primary' : 'secondary'}
@@ -377,5 +383,27 @@ function AssistantMessage({
         </div>
       </ChatMessageBubble>
     </ChatMessage>
+  );
+}
+
+/** Prominent, live countdown to the hearing, colored by urgency. */
+function HearingClock({at, label}: {at: number; label: string | null}) {
+  const left = Math.max(0, at - Date.now());
+  const h = left / 3600_000;
+  const level = h < 72 ? 'urgent' : h < 168 ? 'soon' : 'later';
+  const days = Math.floor(h / 24);
+  const rem = Math.floor(h % 24);
+  const leftText = h < 1 ? 'less than 1 h left' : h < 48 ? `${Math.floor(h)} h left` : `${days} days ${rem} h left`;
+  const when = label ? label.replace(/,?\s*\d{4}/, '').replace(/^(\w{3})\w*/, '$1') : null;
+  return (
+    <span className={`clock clock-${level}`} role="timer" aria-live="polite" title={label ?? ''}>
+      <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" aria-hidden="true">
+        <circle cx="12" cy="13" r="8" />
+        <path d="M12 9v4l2.5 2M9 2h6" />
+      </svg>
+      {when && <span className="clock-when">Hearing {when}</span>}
+      <strong>{leftText}</strong>
+      {level === 'urgent' && <span className="clock-tag">Urgent</span>}
+    </span>
   );
 }

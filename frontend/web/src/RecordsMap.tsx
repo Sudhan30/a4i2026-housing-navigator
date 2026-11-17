@@ -2,7 +2,8 @@ import {useEffect, useRef, useState} from 'react';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 import {getConfig, type Record311} from './api';
-import {hazardLabel, violationClass} from './Blocks';
+import {hazardLabel} from './Blocks';
+import {HAZARD_CLASS, violationClass} from './hazards';
 
 /** Spread records that share one 100-block point so each pin is visible. */
 function fan(lat: number, lng: number, n: number): [number, number] {
@@ -14,11 +15,8 @@ function fan(lat: number, lng: number, n: number): [number, number] {
 
 export type MapView = {anchor: {lat: number; lng: number} | null; radius_m: number};
 
-const CLASS_COLOR: Record<string, string> = {
-  'Class C': '#b91c1c', // immediately hazardous
-  'Class B': '#b45309',
-  'Class A': '#1d4ed8',
-};
+const CLASS_COLOR: Record<string, string> = Object.fromEntries(Object.entries(HAZARD_CLASS).map(([k, v]) => [k, v.color]));
+const plain = (cls: string) => (HAZARD_CLASS[cls] ? `${HAZARD_CLASS[cls].label} (${HAZARD_CLASS[cls].deadline})` : cls);
 
 function esc(s: string) {
   return s.replace(/[&<>"']/g, c => ({'&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'})[c]!);
@@ -105,7 +103,7 @@ export function RecordsMap({
         fillColor: CLASS_COLOR[cls] ?? '#0f766e',
         fillOpacity: 0.95,
       })
-        .bindTooltip(`<b>${esc(hazardLabel(r))}</b> · ${esc(cls)}<br>${esc(r.request_id)} · ${esc((r.block_address ?? '').split(',')[0])}`)
+        .bindTooltip(`<b>${esc(hazardLabel(r))}</b> · ${esc(plain(cls))}<br>${esc(r.request_id)} · ${esc((r.block_address ?? '').split(',')[0])}`)
         .addTo(map);
     }
 
@@ -123,9 +121,9 @@ export function RecordsMap({
     <figure className="map-figure">
       <div ref={el} className="records-map" role="img" aria-label="Map of the tenant's block and nearby records" />
       <figcaption className="map-legend">
-        <span><i className="dot" style={{background: '#b91c1c'}} />Class C</span>
-        <span><i className="dot" style={{background: '#b45309'}} />Class B</span>
-        <span><i className="dot" style={{background: '#1d4ed8'}} />Class A</span>
+        <span><i className="dot" style={{background: HAZARD_CLASS['Class C'].color}} />Immediately hazardous (24 h)</span>
+        <span><i className="dot" style={{background: HAZARD_CLASS['Class B'].color}} />Hazardous (30 days)</span>
+        <span><i className="dot" style={{background: HAZARD_CLASS['Class A'].color}} />Non-hazardous (90 days)</span>
         <span><i className="dot hollow" />Set aside</span>
         <span><i className="dot ring" />Tenant's block</span>
         <span className="legend-radius">
@@ -207,7 +205,7 @@ function drawGoogle(node: HTMLElement, view: MapView, kept: Rec[], excluded: Rec
     const cls = violationClass(r.raw_complaint_type ?? '') ?? '';
     const [la, ln] = fan(r.latitude, r.longitude, n);
     add({lat: la, lng: ln}, dot(CLASS_COLOR[cls] ?? '#0f766e', 8),
-      `<b>${esc(hazardLabel(r))}</b> · ${esc(cls)}<br>${esc(r.request_id)}<br>${esc((r.block_address ?? '').split(',')[0])}`, 3);
+      `<b>${esc(hazardLabel(r))}</b><br>${esc(plain(cls))}<br>${esc(r.request_id)} · ${esc((r.block_address ?? '').split(',')[0])}`, 3);
   }
   const b = circle.getBounds();
   if (b) map.fitBounds(b, 8);

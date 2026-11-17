@@ -329,3 +329,21 @@ code { font-family: var(--mono); font-size: 12px; }
 .pdf-host .cf { box-shadow: none; border-radius: 0; }
 .callout { margin: 0; font-size: 13px; color: var(--color-text-secondary); background: var(--color-background-muted); border-radius: 6px; padding: 6px 10px; }
 .callout strong { color: var(--color-text-primary); font-weight: 600; }
+.hz { display: inline-flex; flex-direction: column; align-items: flex-end; gap: 2px; flex: none; }
+.hz-deadline { font-size: 11.5px; color: var(--color-text-secondary); white-space: nowrap; }
+.cf-class { text-align: left !important; font-weight: 600; font-size: 12.5px; }
+
+/* Hearing countdown */
+.clock {
+  display: inline-flex; align-items: center; gap: 7px; white-space: nowrap;
+  font-size: 13px; padding: 5px 12px; border-radius: 999px; border: 1px solid;
+  font-variant-numeric: tabular-nums;
+}
+.clock strong { font-weight: 700; }
+.clock-when { opacity: .85; }
+.clock-later { color: var(--brand-ink); background: var(--brand-soft); border-color: color-mix(in srgb, var(--brand) 30%, transparent); }
+.clock-soon { color: #92400e; background: #fffbeb; border-color: #f5d38a; }
+.clock-urgent { color: #fff; background: var(--bad); border-color: var(--bad); }
+.clock-tag { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: .06em; background: rgba(255,255,255,.2); padding: 1px 6px; border-radius: 999px; }
+@media (max-width: 900px) { .clock-when { display: none; } }
+@media (max-width: 640px) { .case-line { display: none; } }
