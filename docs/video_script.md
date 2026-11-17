@@ -1,6 +1,6 @@
 # Hearth: 3-Minute Video Script
 
-> **Rendered video:** [`docs/demo/hearth_demo.mp4`](demo/hearth_demo.mp4) (2:40, 1280×720, narration by Google Cloud Text-to-Speech, subtitles burned in) · captions file [`docs/demo/hearth_demo.srt`](demo/hearth_demo.srt). Recorded on the live site; Marisol is a fictional composite, the records are real NYC data.
+> **Rendered videos (no audio, no subtitles):** [`docs/demo/hearth_demo.mp4`](demo/hearth_demo.mp4) — 2:40 walkthrough that follows this script, ready for your own voiceover · [`docs/demo/hearth_features_demo.mp4`](demo/hearth_features_demo.mp4) — 1:41 feature tour (case queue, reopening a case, map layers and record details, panel expand/hide/resize, a new Brooklyn intake, audio-file attachment, the caseload question, deleting a case). Both recorded on the live site; Marisol is a fictional composite, the records are real NYC data.
 
 **Run time:** 2:55 (hard limit 3:00) · **Recorded on:** the live Intake Desk, https://sq7-intake-desk-530357188502.us-central1.run.app, Chrome, 1440×900 or 1280×720
 **Squad 7 · New York · Track: Today at intake + relief funds · Required differentiator: BigQuery Vector Search**
