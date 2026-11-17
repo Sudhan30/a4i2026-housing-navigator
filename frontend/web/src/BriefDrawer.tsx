@@ -4,8 +4,12 @@ import {Markdown} from '@astryxdesign/core/Markdown';
 import {Text} from '@astryxdesign/core/Text';
 import type {Evidence, Fund, Statute, Tract} from './api';
 import {hazardLabel, violationClass} from './Blocks';
+import {CourtForm} from './CourtForm';
 
 export type Draft = {
+  hazards?: string[];
+  narrative?: string;
+  hearing?: string;
   evidence?: Evidence;
   statutes?: Statute[];
   funds?: Fund[];
@@ -67,33 +71,47 @@ function BriefBody({draft, brief, block, hours}: BriefProps) {
   };
   return (
     <div className="brief">
-      <Text type="supporting" color="secondary">
-        {block ?? 'No case open yet'}
-        {hours !== null ? ` · hearing in ${Math.round(hours)} h` : ''}
-      </Text>
-      <article className="paper" key={md.length}>
-        <Markdown>{md}</Markdown>
-      </article>
+      <CourtForm draft={draft} brief={brief} block={block} hearing={draft.hearing ?? null} hours={hours} />
       <div className="brief-actions">
         <Button label="Copy" variant="secondary" size="sm" onClick={() => navigator.clipboard.writeText(md)} />
-        <Button label="Download .md" variant="secondary" size="sm" onClick={download} />
+        <Button label="Download" variant="secondary" size="sm" onClick={download} />
         <Button label="Print" variant="ghost" size="sm" onClick={() => window.print()} />
       </div>
-      <Text type="supporting" color="secondary">
-        Real: ACS 5-year, NYC HPD/311 · Modeled: eviction filings · Internal triage aid, not legal advice.
-      </Text>
     </div>
   );
 }
 
 /** Always-visible panel beside the chat on wide screens. */
-export function BriefPanel(props: BriefProps) {
+export type PanelMode = 'split' | 'chat' | 'brief';
+
+export function BriefPanel({
+  mode,
+  onMode,
+  width,
+  ...props
+}: BriefProps & {mode: PanelMode; onMode: (m: PanelMode) => void; width: number}) {
   return (
-    <aside className="brief-panel" aria-label="Tenant Stabilization Brief">
+    <aside
+      className="brief-panel"
+      aria-label="Tenant Stabilization Brief"
+      style={mode === 'brief' ? {width: '100%'} : {width}}
+    >
       <div className="brief-panel-head">
-        <span className="brief-title">Tenant Stabilization Brief</span>
-        <span className={`brief-state ${props.brief ? 'is-final' : ''}`}>
-          {props.brief ? 'Final' : 'Drafting as you talk'}
+        <span className="brief-title">
+          Tenant Stabilization Brief
+          <span className={`brief-state ${props.brief ? 'is-final' : ''}`}>
+            {props.brief ? 'Final' : 'Drafting as you talk'}
+          </span>
+        </span>
+        <span className="panel-buttons">
+          {mode === 'split' ? (
+            <>
+              <Button label="Expand" variant="ghost" size="sm" onClick={() => onMode('brief')} />
+              <Button label="Hide" variant="ghost" size="sm" onClick={() => onMode('chat')} />
+            </>
+          ) : (
+            <Button label="Show chat" variant="ghost" size="sm" onClick={() => onMode('split')} />
+          )}
         </span>
       </div>
       <div className="brief-panel-scroll">

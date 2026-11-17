@@ -1,13 +1,11 @@
 import {useEffect, useMemo, useRef, useState} from 'react';
 import {
   ChatComposer,
-  ChatDictationButton,
   ChatLayout,
   ChatMessage,
   ChatMessageBubble,
   ChatMessageList,
   ChatToolCalls,
-  useSpeechRecognition,
 } from '@astryxdesign/core/Chat';
 import {Button} from '@astryxdesign/core/Button';
 import {Badge} from '@astryxdesign/core/Badge';
@@ -27,8 +25,9 @@ import {
   type ToolResult,
 } from './api';
 import {EvidenceBlock, FundsBlock} from './Blocks';
-import {BriefDrawer, BriefPanel, type Draft} from './BriefDrawer';
+import {BriefDrawer, BriefPanel, type Draft, type PanelMode} from './BriefDrawer';
 import {HearthMark} from './HearthMark';
+import {MicButton, ReadAloud} from './Voice';
 
 type Msg =
   | {id: number; role: 'user'; text: string}
@@ -71,6 +70,35 @@ function useWide(query = '(min-width: 1100px)') {
 
 export default function App() {
   const wide = useWide();
+  const [mode, setMode] = useState<PanelMode>('split');
+  const [briefW, setBriefW] = useState(() => {
+    try {
+      return Number(localStorage.getItem('hearth.briefW')) || 520;
+    } catch {
+      return 520;
+    }
+  });
+  function startDrag(e: React.PointerEvent<HTMLDivElement>) {
+    e.preventDefault();
+    const handle = e.currentTarget;
+    handle.setPointerCapture(e.pointerId);
+    const move = (ev: PointerEvent) => {
+      const w = Math.min(Math.max(window.innerWidth - ev.clientX, 340), window.innerWidth - 420);
+      setBriefW(w);
+    };
+    const up = () => {
+      handle.removeEventListener('pointermove', move);
+      handle.removeEventListener('pointerup', up);
+      setBriefW(w => {
+        try {
+          localStorage.setItem('hearth.briefW', String(Math.round(w)));
+        } catch {}
+        return w;
+      });
+    };
+    handle.addEventListener('pointermove', move);
+    handle.addEventListener('pointerup', up);
+  }
   const [msgs, setMsgs] = useState<Msg[]>([]);
   const [pending, setPending] = useState(false);
   const [workingIdx, setWorkingIdx] = useState(0);
@@ -84,10 +112,6 @@ export default function App() {
   const [briefOpen, setBriefOpen] = useState(false);
   const nextId = useRef(1);
 
-  const dictation = useSpeechRecognition({
-    lang,
-    onResult: t => setValue(v => (v ? `${v} ${t}` : t)),
-  });
 
   useEffect(() => {
     if (!pending) return;
@@ -130,6 +154,10 @@ export default function App() {
       const n: Draft = {...d, cantProve: [...d.cantProve]};
       for (const {name, response: r} of tools) {
         if (name === 'open_case' && r) {
+          const a = tools.find(t => t.name === 'open_case')?.args;
+          if (a?.hazards) n.hazards = a.hazards;
+          if (a?.tenant_narrative) n.narrative = a.tenant_narrative;
+          if (r.hearing) n.hearing = r.hearing;
           if (typeof r.hours_to_hearing === 'number') setHours(r.hours_to_hearing);
           setUrgent(String(r.urgency ?? '').toUpperCase().startsWith('EMERGENCY'));
         }
@@ -171,7 +199,7 @@ export default function App() {
       }
       footerActions={
         <div className="composer-tools">
-          <ChatDictationButton dictation={dictation} isHiddenWhenUnsupported label="Dictate" />
+          <MicButton lang={lang} onText={t => setValue(v => (v ? `${v} ${t}` : t))} />
           <SegmentedControl value={lang} onChange={v => setLang(v as typeof lang)} label="Dictation language" size="sm">
             <SegmentedControlItem value="en-US" label="EN" />
             <SegmentedControlItem value="es-US" label="ES" />
@@ -205,7 +233,7 @@ export default function App() {
       </header>
 
       <div className="body">
-      <main className="chat-wrap">
+      <main className="chat-wrap" hidden={wide && mode === 'brief'}>
         <ChatLayout composer={composer} density="balanced">
           {msgs.length === 0 && !pending ? (
             <div className="welcome">
@@ -247,7 +275,32 @@ export default function App() {
           )}
         </ChatLayout>
       </main>
-      {wide && <BriefPanel draft={draft} brief={brief} block={block} hours={hours} />}
+      {wide && mode === 'split' && (
+        <div
+          className="divider"
+          role="separator"
+          aria-orientation="vertical"
+          aria-label="Resize panels (double-click to reset)"
+          tabIndex={0}
+          onPointerDown={startDrag}
+          onDoubleClick={() => setBriefW(520)}
+          title="Drag to resize · double-click to reset"
+          onKeyDown={e => {
+            if (e.key === 'ArrowLeft') setBriefW(w => Math.min(w + 40, window.innerWidth - 420));
+            if (e.key === 'ArrowRight') setBriefW(w => Math.max(w - 40, 340));
+          }}
+        >
+          <span className="divider-grip" aria-hidden="true" />
+        </div>
+      )}
+      {wide && mode !== 'chat' && (
+        <BriefPanel draft={draft} brief={brief} block={block} hours={hours} mode={mode} onMode={setMode} width={briefW} />
+      )}
+      {wide && mode === 'chat' && (
+        <button className="brief-rail" onClick={() => setMode('split')} aria-label="Show the brief">
+          <span>Brief {sectionsReady}/5</span>
+        </button>
+      )}
       </div>
 
       {!wide && <BriefDrawer
@@ -284,6 +337,7 @@ function AssistantMessage({
         <div className="reply">
           {calls.length > 0 && <ChatToolCalls calls={calls} label={`${calls.length} step${calls.length > 1 ? 's' : ''}`} />}
           {msg.text && <Markdown density="compact">{msg.text}</Markdown>}
+          {msg.text && <ReadAloud text={msg.text} />}
           {evidence?.kept && <EvidenceBlock evidence={evidence} />}
           {funds && <FundsBlock funds={funds} />}
           {wroteBrief && (

@@ -20,9 +20,16 @@ export type Record311 = {
   similarity: number;
   complaint_narrative?: string;
   excluded_because?: string;
+  latitude?: number;
+  longitude?: number;
 };
 export type RawCandidate = {rank: number; request_id: string; similarity: number; status: string; property_type: string};
-export type Evidence = {kept: Record311[]; excluded: Record311[]; raw_top5_before_rules?: RawCandidate[]};
+export type Evidence = {
+  kept: Record311[];
+  excluded: Record311[];
+  raw_top5_before_rules?: RawCandidate[];
+  map?: {anchor: {lat: number; lng: number} | null; radius_m: number};
+};
 export type Statute = {code_citation: string; ordinance_title: string; raw_statute_text: string};
 export type Tract = {
   census_tract_geoid: string;
@@ -33,7 +40,7 @@ export type Tract = {
   no_vehicle_pct: number;
 };
 
-export type ToolResult = {name: string; response: any};
+export type ToolResult = {name: string; response: any; args?: any};
 export type TurnResult = {text: string; tools: ToolResult[]};
 
 export const IS_MOCK = new URLSearchParams(location.search).get('mock') === '1';
@@ -69,10 +76,13 @@ export async function sendTurn(text: string): Promise<TurnResult> {
   if (!res.ok) throw new Error(`Agent error (HTTP ${res.status}): ${(await res.text()).slice(0, 200)}`);
   const events: any[] = await res.json();
   const tools: ToolResult[] = [];
+  const args: Record<string, any> = {};
   let out = '';
   for (const e of events) {
     for (const p of e?.content?.parts ?? []) {
-      if (p.functionResponse) tools.push({name: p.functionResponse.name, response: p.functionResponse.response});
+      if (p.functionCall) args[p.functionCall.name] = p.functionCall.args;
+      if (p.functionResponse)
+        tools.push({name: p.functionResponse.name, response: p.functionResponse.response, args: args[p.functionResponse.name]});
       else if (p.text) out += (out ? '\n\n' : '') + p.text;
     }
   }
@@ -99,5 +109,36 @@ async function mockTurn(text: string): Promise<TurnResult> {
   const t = turns.find(x => x.user?.toLowerCase() === text.toLowerCase()) ?? turns[mockIndex % turns.length];
   mockIndex++;
   await new Promise(r => setTimeout(r, 600));
-  return {text: t.assistant ?? '', tools: (t.tools ?? []).map((x: any) => ({name: x.name, response: x.response}))};
+  return {text: t.assistant ?? '', tools: (t.tools ?? []).map((x: any) => ({name: x.name, response: x.response, args: x.args}))};
+}
+
+// ---- Google Cloud speech + maps ----------------------------------------
+let configPromise: Promise<{mapsApiKey: string}> | null = null;
+export function getConfig() {
+  configPromise ??= fetch('/config.json')
+    .then(r => (r.ok ? r.json() : {mapsApiKey: ''}))
+    .catch(() => ({mapsApiKey: ''}));
+  return configPromise;
+}
+
+/** Cloud Speech-to-Text via frontend/server.py. */
+export async function transcribe(audio: Blob, lang: string): Promise<string> {
+  const r = await fetch(`/stt?lang=${encodeURIComponent(lang)}`, {
+    method: 'POST',
+    headers: {'Content-Type': 'application/octet-stream'},
+    body: audio,
+  });
+  if (!r.ok) throw new Error(`Speech-to-Text failed (HTTP ${r.status})`);
+  return (await r.json()).transcript ?? '';
+}
+
+/** Cloud Text-to-Speech via frontend/server.py; returns an object URL for an MP3. */
+export async function speak(text: string, lang = 'en-US'): Promise<string> {
+  const r = await fetch('/tts', {
+    method: 'POST',
+    headers: {'Content-Type': 'application/json'},
+    body: JSON.stringify({text, lang}),
+  });
+  if (!r.ok) throw new Error(`Text-to-Speech failed (HTTP ${r.status})`);
+  return URL.createObjectURL(await r.blob());
 }

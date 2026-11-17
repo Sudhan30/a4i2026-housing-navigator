@@ -174,3 +174,141 @@ code { font-family: var(--mono); font-size: 12px; }
   .brief-panel { width: auto; border: none; }
   .paper { border: none; padding: 0; }
 }
+
+/* Resizable / collapsible panels */
+.brief-panel { width: 520px; }
+.divider {
+  width: 6px; flex: none; cursor: col-resize; background: transparent; position: relative;
+  margin-inline: -3px; z-index: 2;
+}
+.divider::after { content: ''; position: absolute; inset: 0 2px; background: transparent; transition: background 0.15s; }
+.divider:hover::after, .divider:focus-visible::after { background: var(--brand); }
+.divider:focus-visible { outline: none; }
+.brief-title { display: inline-flex; align-items: center; gap: 10px; }
+.panel-buttons { display: inline-flex; gap: 4px; }
+.brief-rail {
+  all: unset; cursor: pointer; flex: none; width: 36px;
+  border-left: 1px solid var(--color-border); background: var(--color-background-muted);
+  display: grid; place-items: center;
+}
+.brief-rail span { writing-mode: vertical-rl; transform: rotate(180deg); font-size: 13px; font-weight: 600; color: var(--brand-ink); }
+.brief-rail:hover { background: var(--brand-soft); }
+.brief-rail:focus-visible { outline: 2px solid var(--brand); outline-offset: -2px; }
+.chat-wrap[hidden] { display: none; }
+
+/* Records map */
+.map-figure { margin: 0; display: flex; flex-direction: column; gap: 6px; }
+.records-map { height: 240px; border-radius: 8px; border: 1px solid var(--color-border); overflow: hidden; z-index: 0; }
+.map-legend { display: flex; flex-wrap: wrap; gap: 6px 14px; font-size: 12px; color: var(--color-text-secondary); }
+.map-legend span { display: inline-flex; align-items: center; gap: 5px; }
+.dot { width: 10px; height: 10px; border-radius: 50%; display: inline-block; }
+.dot.hollow { background: #fff; border: 1.5px solid #94a3b8; }
+.dot.ring { background: rgba(15,27,45,.08); border: 2px solid #0f1b2d; width: 12px; height: 12px; }
+.legend-radius { margin-left: auto; }
+.leaflet-container { font-family: var(--font-family-body); }
+
+/* Voice (Google Cloud STT / TTS) */
+.mic-wrap { display: inline-flex; align-items: center; gap: 6px; }
+.mic {
+  all: unset; cursor: pointer; width: 32px; height: 32px; border-radius: 999px;
+  display: grid; place-items: center; color: var(--color-text-secondary);
+}
+.mic:hover { background: var(--color-background-muted); color: var(--color-text-primary); }
+.mic:focus-visible { outline: 2px solid var(--brand); outline-offset: 1px; }
+.mic.recording { background: var(--bad); color: #fff; animation: pulse 1.2s ease-in-out infinite; }
+.mic.working { opacity: 0.6; cursor: progress; }
+.mic-hint { font-size: 12px; color: var(--color-text-secondary); }
+.mic-hint.is-error { color: var(--bad); }
+@keyframes pulse { 50% { box-shadow: 0 0 0 6px color-mix(in srgb, var(--bad) 20%, transparent); } }
+@media (prefers-reduced-motion: reduce) { .mic.recording { animation: none; } }
+.read-aloud {
+  all: unset; cursor: pointer; align-self: flex-start;
+  font-size: 12px; font-weight: 500; color: var(--brand);
+  padding: 2px 8px; border-radius: 999px; border: 1px solid var(--color-border);
+}
+.read-aloud:hover { background: var(--brand-soft); }
+.read-aloud:focus-visible { outline: 2px solid var(--brand); outline-offset: 1px; }
+
+/* ---- Visible, draggable divider ---------------------------------------- */
+.divider { width: 12px; margin-inline: -6px; display: grid; place-items: center; }
+.divider::after { inset: 0 5px; }
+.divider-grip {
+  position: relative; z-index: 1; width: 6px; height: 44px; border-radius: 999px;
+  background: var(--color-background-surface); border: 1px solid var(--color-border);
+  box-shadow: 0 1px 2px rgba(15, 27, 45, 0.08);
+  background-image: radial-gradient(circle, #94a3b8 1px, transparent 1.2px);
+  background-size: 4px 6px; background-position: center;
+}
+.divider:hover .divider-grip, .divider:focus-visible .divider-grip { border-color: var(--brand); }
+
+/* ---- Court-paper worksheet ---------------------------------------------- */
+.brief-panel { background: light-dark(#e9edf2, #111823); }
+.cf {
+  position: relative;
+  background: #fff; color: #111;
+  font-family: 'Times New Roman', Tinos, 'Liberation Serif', Times, serif;
+  font-size: 14px; line-height: 1.45;
+  padding: 36px 40px 28px;
+  box-shadow: 0 1px 2px rgba(0,0,0,.12), 0 8px 24px rgba(15,27,45,.10);
+  border-radius: 2px;
+  /* faint pleading-paper margin rule */
+  background-image: linear-gradient(to right, transparent 26px, #e8b4b4 26px, #e8b4b4 27px, transparent 27px);
+}
+.cf-stamp {
+  position: absolute; top: 18px; right: 22px; transform: rotate(-8deg);
+  border: 2px solid #b91c1c; color: #b91c1c; padding: 2px 10px; border-radius: 4px;
+  font: 700 12px/1.4 'Public Sans', sans-serif; letter-spacing: .12em; text-transform: uppercase; opacity: .85;
+}
+.cf-stamp.ready { border-color: #047857; color: #047857; }
+.cf-court { text-align: center; font-weight: 700; letter-spacing: .03em; font-size: 13.5px; margin-bottom: 14px; }
+.cf-caption {
+  display: grid; grid-template-columns: 1.15fr 1fr; border-top: 1.5px solid #111; border-bottom: 1.5px solid #111;
+  margin-bottom: 16px;
+}
+.cf-parties { border-right: 1.5px solid #111; padding: 10px 14px 10px 0; }
+.cf-parties p, .cf-meta p { margin: 2px 0; }
+.cf-role { padding-left: 48px; font-style: italic; }
+.cf-against { text-align: center; margin: 6px 0 !important; }
+.cf-meta { padding: 10px 0 10px 14px; display: flex; flex-direction: column; gap: 6px; }
+.cf-blank { display: inline-block; min-width: 90px; border-bottom: 1px solid #111; padding: 0 4px; line-height: 1.25; }
+.cf-blank.wide { min-width: 170px; }
+.cf-blank.filled { font-family: 'IBM Plex Mono', ui-monospace, monospace; font-size: 12.5px; color: #1e3a8a; }
+.cf-title { text-align: center; font-size: 14.5px; font-weight: 700; letter-spacing: .02em; margin: 8px 0 14px; }
+.cf-title small { display: block; font-weight: 400; font-style: italic; font-size: 12.5px; letter-spacing: 0; margin-top: 2px; }
+.cf-sec { margin: 0 0 14px; }
+.cf-sec h3 { font-size: 13.5px; font-weight: 700; margin: 0 0 6px; text-transform: none; }
+.cf-checks { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 4px 12px; }
+.cf-checks label, .cf-list li { display: flex; align-items: baseline; gap: 6px; }
+.cf-list { list-style: none; padding: 0; margin: 0; display: flex; flex-direction: column; gap: 4px; }
+.cf-box {
+  flex: none; width: 12px; height: 12px; border: 1.2px solid #111; display: inline-grid; place-items: center;
+  font: 700 10px/1 'Public Sans', sans-serif; color: #1e3a8a; transform: translateY(1px);
+}
+.cf-cite { margin-left: auto; font-size: 12.5px; color: #333; white-space: nowrap; padding-left: 8px; }
+.cf-table { width: 100%; border-collapse: collapse; font-size: 13px; }
+.cf-table th, .cf-table td { border: 1px solid #111; padding: 3px 6px; text-align: left; vertical-align: top; }
+.cf-table th { font-weight: 700; background: #f3f3f3; }
+.cf-class { text-align: center !important; font-weight: 700; }
+.cf-mono { font-family: 'IBM Plex Mono', ui-monospace, monospace; font-size: 12px; color: #1e3a8a; }
+.cf-note { font-size: 12.5px; font-style: italic; margin: 6px 0 0; color: #333; }
+.cf-pending { color: #888; font-style: italic; margin: 0; border-bottom: 1px dotted #bbb; padding-bottom: 4px; }
+.cf-memo { font-size: 13.5px; }
+.cf-equity { font-size: 12.5px; color: #333; border-top: 1px dashed #999; padding-top: 8px; }
+.cf-sign { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; margin: 26px 0 14px; font-size: 12.5px; }
+.cf-sign > div { display: flex; flex-direction: column; gap: 2px; }
+.cf-line { display: block; border-bottom: 1px solid #111; height: 26px; }
+.cf-date { color: #444; }
+.cf-foot { border-top: 1px solid #111; padding-top: 6px; font-size: 11px; color: #555; font-family: 'Public Sans', sans-serif; }
+.cf .astryx-markdown, .cf [class*="markdown"] { font-family: inherit; color: #111; }
+@media (max-width: 700px) {
+  .cf { padding: 24px 18px; background-image: none; }
+  .cf-caption { grid-template-columns: 1fr; }
+  .cf-parties { border-right: none; border-bottom: 1px solid #111; }
+  .cf-checks { grid-template-columns: 1fr 1fr; }
+}
+@media print { .cf { box-shadow: none; } .cf-stamp { display: none; } }
+.cf :where(p, h2, h3, li, td, th, label, div, small, em, section, header) { font-family: 'Times New Roman', Tinos, 'Liberation Serif', Times, serif; }
+.cf .cf-mono, .cf .cf-blank.filled { font-family: 'IBM Plex Mono', ui-monospace, monospace; }
+.cf { padding-top: 54px; }
+.cf-stamp { top: 16px; right: 20px; }
+.cf-memo h4 { font-size: 13.5px; margin: 10px 0 4px; }

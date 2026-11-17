@@ -64,7 +64,8 @@ def search_habitability_evidence(tool_context: ToolContext, hazards: list[str] |
     kept, excluded = [], []
     for r in rows:
         why = _classify(r)
-        item = {k: (str(v) if v is not None and k.endswith("_date") else v) for k, v in r.items()}
+        item = {k: (str(v) if v is not None and k.endswith("_date") else v)
+                for k, v in r.items() if k not in ("anchor_lat", "anchor_lng")}
         if why:
             item["excluded_because"] = EXCLUSION_REASONS[why].format(m=PROXIMITY_METERS)
             if r["request_id"].startswith("DECOY-"):
@@ -81,7 +82,13 @@ def search_habitability_evidence(tool_context: ToolContext, hazards: list[str] |
             "Possible under-reporting: route to an inspection request and to funds that do not "
             "require an open habitability case.")
     tool_context.state["case"] = case
-    return {"queries_used": queries, "raw_top5_before_rules": raw_top,
+    first = rows[0] if rows else {}
+    map_view = {
+        "anchor": ({"lat": first["anchor_lat"], "lng": first["anchor_lng"]}
+                   if first.get("anchor_lat") is not None else None),
+        "radius_m": PROXIMITY_METERS,
+    }
+    return {"queries_used": queries, "raw_top5_before_rules": raw_top, "map": map_view,
             "kept": case["evidence"], "excluded": case["exclusions"],
             "evidence_scope": "100-block public record — corroborates block conditions, not the tenant's unit."}
 

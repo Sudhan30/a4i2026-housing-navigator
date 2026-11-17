@@ -2,6 +2,7 @@ import {Badge} from '@astryxdesign/core/Badge';
 import {Collapsible} from '@astryxdesign/core/Collapsible';
 import {Text} from '@astryxdesign/core/Text';
 import type {Evidence, Fund, Record311} from './api';
+import {RecordsMap} from './RecordsMap';
 
 export function violationClass(type: string): string | null {
   const m = (type ?? '').match(/CLASS\s+([ABC])\b/i);
@@ -43,6 +44,8 @@ export function EvidenceBlock({evidence}: {evidence: Evidence}) {
           {kept.length} open · residential · near the block
         </Text>
       </div>
+
+      {evidence.map?.anchor && <RecordsMap view={evidence.map} kept={kept} excluded={excluded} />}
 
       {kept.length === 0 ? (
         <Text color="secondary">No open residential record nearby. This may be under-reporting, not absence.</Text>

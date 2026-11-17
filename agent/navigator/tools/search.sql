@@ -29,7 +29,10 @@ SELECT
   h.raw_complaint_type, h.inspection_status, h.created_date, h.closed_date,
   h.complaint_narrative, h.query_text,
   ROUND(1 - h.distance, 4) AS similarity,
-  ROUND(ST_DISTANCE(ST_GEOGPOINT(h.longitude, h.latitude), (SELECT pt FROM anchor)), 0) AS meters_from_anchor
+  ROUND(ST_DISTANCE(ST_GEOGPOINT(h.longitude, h.latitude), (SELECT pt FROM anchor)), 0) AS meters_from_anchor,
+  h.latitude, h.longitude,
+  ST_Y((SELECT pt FROM anchor)) AS anchor_lat,
+  ST_X((SELECT pt FROM anchor)) AS anchor_lng
 FROM hits h
 QUALIFY ROW_NUMBER() OVER (PARTITION BY h.request_id ORDER BY h.distance) = 1
 ORDER BY h.distance;
